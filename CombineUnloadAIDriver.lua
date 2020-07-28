@@ -62,7 +62,7 @@ CombineUnloadAIDriver.pathfindingRange = 5 -- won't do pathfinding if target is 
 
 CombineUnloadAIDriver.myStates = {
 	ON_FIELD = {},
-	ON_STREET = {},
+	ON_UNLOAD_COURSE = {},
 	WAITING_FOR_COMBINE_TO_CALL ={},
 	WAITING_FOR_PATHFINDER={},
 	FINDPATH_TO_TRACTOR={},
@@ -116,6 +116,7 @@ function CombineUnloadAIDriver:readUpdateStream(streamId)
 end
 
 function CombineUnloadAIDriver:setHudContent()
+	AIDriver.setHudContent(self)
 	courseplay.hud:setCombineUnloadAIDriverContent(self.vehicle)
 end
 
@@ -138,16 +139,17 @@ function CombineUnloadAIDriver:start(startingPoint)
 	self.ppc:setNormalLookaheadDistance()
 
 	if startingPoint:is(StartingPointSetting.START_WITH_UNLOAD) then
-		self:debug('Start unloading, waiting for a combine to call')
+		self:info('Start unloading, waiting for a combine to call')
 		self:setNewState(self.states.ON_FIELD)
 		self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
 		self:disableCollisionDetection()
 		self:setDriveUnloadNow(false)
 	else
-		self:debug('Start on unload course')
 		local ix = self.unloadCourse:getStartingWaypointIx(AIDriverUtil.getDirectionNode(self.vehicle), startingPoint)
+		self:info('AI driver in mode %d starting at %d/%d waypoints (%s)',
+				self:getMode(), ix, self.unloadCourse:getNumberOfWaypoints(), tostring(startingPoint))
 		self:startCourseWithPathfinding(self.unloadCourse, ix, 0, 0)
-		self:setNewState(self.states.ON_STREET)
+		self:setNewState(self.states.ON_UNLOAD_COURSE)
 	end
 	self.distanceToFront = 0
 end
@@ -170,22 +172,26 @@ function CombineUnloadAIDriver:drive(dt)
 	courseplay:updateFillLevelsAndCapacities(self.vehicle)
 	self:updateCombineStatus()
 
-	if self.state == self.states.ON_STREET then
-		-- disable speed control as it messes up the speed control during unload
-		-- TODO: refactor that whole unload process, it was just copied from the legacy CP code
-		self.forwardLookingProximitySensorPack:disableSpeedControl()
-		self:searchForTipTriggers()
-		local allowedToDrive, giveUpControl = self:onUnLoadCourse(true, dt)
-		if not allowedToDrive then
-			self:hold()
-		end
-		if not giveUpControl then
-			AIDriver.drive(self, dt)
-		end
+	if self.state == self.states.ON_UNLOAD_COURSE then
+		self:driveUnloadCourse(dt)
 	elseif self.state == self.states.ON_FIELD then
 		local renderOffset = self.vehicle.cp.coursePlayerNum * 0.03
 		self:renderText(0, 0.1 + renderOffset, "%s: self.onFieldState :%s", nameNum(self.vehicle), self.onFieldState.name)
 		self:driveOnField(dt)
+	end
+end
+
+function CombineUnloadAIDriver:driveUnloadCourse(dt)
+	-- disable speed control as it messes up the speed control during unload
+	-- TODO: refactor that whole unload process, it was just copied from the legacy CP code
+	self.forwardLookingProximitySensorPack:disableSpeedControl()
+	self:searchForTipTriggers()
+	local allowedToDrive, giveUpControl = self:onUnLoadCourse(true, dt)
+	if not allowedToDrive then
+		self:hold()
+	end
+	if not giveUpControl then
+		AIDriver.drive(self, dt)
 	end
 end
 
@@ -540,7 +546,7 @@ end
 
 function CombineUnloadAIDriver:getRecordedSpeed()
 	-- default is the street speed (reduced in corners)
-	if self.state == self.states.ON_STREET then
+	if self.state == self.states.ON_UNLOAD_COURSE then
 		local speed = self:getDefaultStreetSpeed(self.ppc:getCurrentWaypointIx()) or self.vehicle.cp.speeds.street
 		if self.vehicle.cp.settings.useRecordingSpeed:is(true) then
 			-- use default street speed if there's no recorded speed.
@@ -578,7 +584,6 @@ function CombineUnloadAIDriver:driveBesideChopper()
 	self:renderText(0, 0.02,"%s: driveBesideChopper:offset local :%s saved:%s",nameNum(self.vehicle),tostring(self.combineOffset),tostring(self.vehicle.cp.combineOffset))
 	self:releaseAutoAimNode()
 	local _, _, dz = localToLocal(targetNode, self:getCombineRootNode(), 0, 0, 5)
-	renderText(0.2,0.325,0.02,string.format("dz: %.1f", dz))
 	self:setSpeed(math.max(0, (self.combineToUnload.lastSpeedReal * 3600) + (MathUtil.clamp(-dz, -10, 15))))
 end
 
@@ -626,7 +631,7 @@ function CombineUnloadAIDriver:driveBesideTractor(dt)
 end
 
 function CombineUnloadAIDriver:onEndCourse()
-	if self.state == self.states.ON_STREET then
+	if self.state == self.states.ON_UNLOAD_COURSE then
 		self:setNewState(self.states.ON_FIELD)
 		self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
 		self:setDriveUnloadNow(false)
@@ -638,7 +643,7 @@ end
 function CombineUnloadAIDriver:onLastWaypoint()
 	if self.state == self.states.ON_FIELD then
 		if self.onFieldState == self.states.DRIVE_TO_UNLOAD_COURSE then
-			self:setNewState(self.states.ON_STREET)
+			self:setNewState(self.states.ON_UNLOAD_COURSE)
 			self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
 			self:enableCollisionDetection()
 			courseplay:openCloseCover(self.vehicle, courseplay.CLOSE_COVERS)
@@ -867,7 +872,6 @@ function CombineUnloadAIDriver:getSpeedBesideChopper(targetNode)
 		allowedToDrive = false
 	end
 	-- negative speeds are invalid
-	renderText(0.2,0.225,0.02,string.format("dz:%s",tostring(dz)))
 	return math.max(0, (self.combineToUnload.lastSpeedReal * 3600) + (MathUtil.clamp(-dz, -10, 15))), allowedToDrive
 end
 
@@ -883,7 +887,6 @@ function CombineUnloadAIDriver:getSpeedBehindCombine()
 	end
 	local targetGap = 20
 	local targetDistance = self.distanceToCombine - targetGap
-	--renderText(0.2,0.195,0.02,string.format("self.distanceToCombine:%s, targetDistance:%s speed:%s",tostring(self.distanceToCombine),tostring(targetDistance),tostring((self.combineToUnload.lastSpeedReal * 3600) +(MathUtil.clamp(targetDistance,-10,15)))))
 	return (self.combineToUnload.lastSpeedReal * 3600) +(MathUtil.clamp(targetDistance,-10,15))
 end
 
@@ -1242,7 +1245,7 @@ end
 
 function CombineUnloadAIDriver:isOkToStartUnloadingCombine()
 	if self.combineToUnload.cp.driver:isChopper() then return false end
-	if self.combineToUnload.cp.driver:isReadyToUnload() then
+	if self.combineToUnload.cp.driver:isReadyToUnload(self.vehicle.cp.settings.useRealisticDriving:is(true)) then
 		return self:isBehindAndAlignedToCombine() or self:isInFrontAndAlignedToMovingCombine()
 	else
 		self:debugSparse('combine not ready to unload, waiting')
@@ -1340,7 +1343,8 @@ function CombineUnloadAIDriver:setupFollowCourse()
 		return
 	end
 	local followCourse = self.combineCourse:copy(self.vehicle)
-	local followCourseIx = self.combineCourse:getCurrentWaypointIx()
+	-- relevant waypoint is the closest to the combine, prefer that so our PPC will get us on course with the proper offset faster
+	local followCourseIx = self.combineToUnload.cp.driver:getRelevantWaypointIx() or self.combineCourse:getCurrentWaypointIx()
 	return followCourse, followCourseIx
 end
 
@@ -1392,7 +1396,7 @@ end
 --Start driving to chopper
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:startDrivingToChopper()
-	self:debug('Start finding path to chopper')
+	self:debug('Start pathfinding to chopper')
 	self:startPathfindingToCombine(self.onPathfindingDoneToCombine, nil, -15)
 end
 
@@ -1807,10 +1811,11 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 	if self:canDriveBesideCombine(self.combineToUnload) or (self.combineToUnload.cp.driver and self.combineToUnload.cp.driver:isWaitingInPocket()) then
 		self:driveBesideCombine()
 	else
-		self:debug('Can\'t drive beside combine, releasing it.')
-		self:releaseUnloader()
-		self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
-		return
+		self:debugSparse('Can\'t drive beside combine as probably fruit under the pipe but ignore that for now and continue unloading.')
+		self:driveBesideCombine()
+		--self:releaseUnloader()
+		--self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
+		--return
 	end
 
 	--when the combine is empty, stop and wait for next combine
@@ -1831,7 +1836,7 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 	end
 
 	-- don't move until ready to unload
-	if not self.combineToUnload.cp.driver:isReadyToUnload() then
+	if not self.combineToUnload.cp.driver:isReadyToUnload(self.vehicle.cp.settings.useRealisticDriving:is(true)) then
 		self:setSpeed(0)
 	end
 
@@ -2074,7 +2079,7 @@ end
 -- We are blocking another vehicle who wants us to move out of way
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:onBlockingOtherVehicle(blockedVehicle)
-	self:debug('%s wants me to move out of way', blockedVehicle:getName())
+	self:debugSparse('%s wants me to move out of way', blockedVehicle:getName())
 	if blockedVehicle.cp.driver:isChopper() then
 		-- TODO: think about how to best handle choppers, since they always stop when no trailer
 		-- is in range they always send these blocking events.
@@ -2092,9 +2097,10 @@ function CombineUnloadAIDriver:onBlockingOtherVehicle(blockedVehicle)
 		local reverseCourse = self:getStraightReverseCourse(10)
 		self:startCourse(reverseCourse, 1, self.course, self.course:getCurrentWaypointIx())
 		self.stateAfterMovedOutOfWay = self.onFieldState
+		self:debug('Moving out of the way for %s', blockedVehicle:getName())
 		self:setNewOnFieldState(self.states.MOVING_OUT_OF_WAY)
 	else
-		self:debug('Already busy moving out of the way')
+		self:debugSparse('Already busy moving out of the way')
 	end
 end
 

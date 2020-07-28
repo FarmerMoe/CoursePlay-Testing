@@ -72,6 +72,8 @@ function CombineUnloadManager:addCombineToList(vehicle, driver)
 	-- the object with the combine specialization, this is the same as the vehicle for choppers and combines
 	-- but will point to the implement if it is a towed/mounted harvester
 	local combineObject = driver:getCombine()
+	-- overloaders also use the CombineAIDriver, but they don't have a combine object
+	if not combineObject then return end
 	self:debug('added %s to list (combine object %s)', vehicle.name, combineObject.name)
 	self.combines[vehicle]= {
 		driver = driver,
@@ -295,9 +297,9 @@ function CombineUnloadManager:updateCombinesAttributes()
 		self:updateFillSpeed(combine,attributes)
 		if courseplay.debugChannels[self.debugChannel] then
 			renderText(0.1,0.175+(0.02*number) ,0.015,
-					string.format("%s: leftOK: %s; rightOK:%s numUnloaders:%d readyToUnload: %s",
+					string.format("%s: leftOK: %s; rightOK:%s numUnloaders:%d",
 							nameNum(combine), tostring(attributes.leftOkToDrive), tostring(attributes.rightOKToDrive),
-							#attributes.unloaders, tostring(combine.cp.driver:isReadyToUnload())))
+							#attributes.unloaders))
 		end
 		number = number + 1
 	end

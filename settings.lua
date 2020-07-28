@@ -33,6 +33,8 @@ function courseplay:setAIDriver(vehicle, mode)
 		vehicle.cp.driver = GrainTransportAIDriver(vehicle)	
 	elseif mode == courseplay.MODE_COMBI then
 		vehicle.cp.driver = CombineUnloadAIDriver(vehicle)
+	elseif mode == courseplay.MODE_OVERLOADER then
+		vehicle.cp.driver = OverloaderAIDriver(vehicle)
 	elseif mode == courseplay.MODE_SHOVEL_FILL_AND_EMPTY then
 		vehicle.cp.driver = ShovelModeAIDriver(vehicle)
 	elseif mode == courseplay.MODE_SEED_FERTILIZE then
@@ -2034,6 +2036,11 @@ function SettingList:is(value)
 	return self.values[self.current] == value
 end
 
+-- Get the current text key (for the logs, for example)
+function SettingList:__tostring()
+	return self.texts[self.current]
+end
+
 -- Get the current text
 function SettingList:getText()
 	return courseplay:loc(self.texts[self.current])
@@ -2172,7 +2179,7 @@ function SettingList:validateCurrentValue()
 	self:setToIx(new)
 end
 
-function SettingList:__tostring()
+function SettingList:getDebugString()
 	local result = string.format('%s:\n', self.name)
 	for i = 1, #self.values do
 		result = result .. string.format('\t%s%2d: %s\n', i == self.current and '*' or ' ', i, tostring(self.values[i]))
@@ -2319,8 +2326,10 @@ function StartingPointSetting:init(vehicle)
 end
 
 function StartingPointSetting:checkAndSetValidValue(new)
-	-- enable unload only for CombineUnloadAIDriver
-	if self.vehicle.cp.driver and self.vehicle.cp.mode ~= courseplay.MODE_COMBI and
+	-- enable unload only for CombineUnloadAIDriver/Overloader
+	if self.vehicle.cp.driver and
+			self.vehicle.cp.mode ~= courseplay.MODE_COMBI and
+			self.vehicle.cp.mode ~= courseplay.MODE_OVERLOADER and
 			self.values[new] == StartingPointSetting.START_WITH_UNLOAD then
 		return 1
 	else
