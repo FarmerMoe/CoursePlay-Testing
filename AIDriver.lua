@@ -1236,16 +1236,22 @@ function AIDriver:onUnLoadCourse(allowedToDrive, dt)
 	local isNearUnloadPoint, unloadPointIx = self.course:hasUnloadPointWithinDistance(self.ppc:getCurrentWaypointIx(),20)
 	self:setSpeed(self:getRecordedSpeed())
 	--handle cover
+
+	--handle cover and pipe
 	if self:hasTipTrigger() or isNearUnloadPoint then
 		courseplay:openCloseCover(self.vehicle, not courseplay.SHOW_COVERS)
 
+
+		-- EBP: Added
 		if self.vehicle.cp.totalFillLevel > 0 then
 			courseplay:openClosePipe(self.vehicle, courseplay.SHOW_COVERS) -- true -- open pipe
 		else
 			courseplay:openClosePipe(self.vehicle, not courseplay.SHOW_COVERS) -- false -  close pipe
 		end
+		-- EBP: End Add
 
 	end
+
 	-- done tipping?
 	if self:hasTipTrigger() and self.vehicle.cp.totalFillLevel == 0 and self:getHasAllTippersClosed() then
 		courseplay:resetTipTrigger(self.vehicle, true);
