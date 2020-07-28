@@ -1073,6 +1073,7 @@ function AIDriver:dischargeAtUnloadPoint(dt,unloadPointIx)
 				if tipper.getTipState and tipper:getTipState() == Trailer.TIPSTATE_OPEN and not isTipping then
 					stopForTipping = false
 
+				-- EBP Added
 				if (tipper.typeName == 'augerWagon' or vehicle.workTool.cp.isAugerWagon) then
 					if readyToDischarge and stopForTipping then
 						if (tipper.spec_pipe ~= nil and tipper.spec_pipe.currentState >= 2) then
@@ -1083,6 +1084,7 @@ function AIDriver:dischargeAtUnloadPoint(dt,unloadPointIx)
 						end
 					end
 				else
+
 					--force tipper to tip to ground
 					if tipper.getTipState and (tipper:getTipState() == Trailer.TIPSTATE_CLOSED or tipper:getTipState() == Trailer.TIPSTATE_CLOSING) and readyToDischarge then
 						tipper:setDischargeState(Dischargeable.DISCHARGE_STATE_GROUND)
@@ -1091,7 +1093,10 @@ function AIDriver:dischargeAtUnloadPoint(dt,unloadPointIx)
 					if tipper.getTipState and tipper:getTipState() == Trailer.TIPSTATE_OPEN and not isTipping then
 						stopForTipping = false
 					end
+
 				end
+				-- EBP End Add
+
 			end
 		end
 	end
