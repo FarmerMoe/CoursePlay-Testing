@@ -1421,6 +1421,14 @@ function CombineUnloadAIDriver:startDrivingToCombine()
 		else
 			self:debug('can\'t find rendezvous waypoint to combine, waiting')
 			self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
+			self:debug('can\'t find rendezvous waypoint to combine, waiting ... EBP TEST pathfinding to current combine point')
+			
+			--EBP test
+			--self:startPathfindingToCombine(self.onPathfindingDoneToCombine, nil, -8)
+			self:startPathfindingToCombine(self.onPathfindingDoneToCombine,  xOffset, zOffset)
+			--EBP note if pipe is in fruit then gets to combine but stops blocking unload until change to stopped unload
+			
+			--self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
 		end
 	end
 end
@@ -1787,6 +1795,13 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 		local reverseCourse = self:getStraightReverseCourse()
 		AIDriver.startCourse(self, reverseCourse,1)
 		return 
+		self:startCourse(reverseCourse,1)
+		self.ppc:setNormalLookaheadDistance()
+		--self.ppc:setNormalLookaheadDistance()
+
+		-- EBP END
+		
+		return
 	end
 
 	if self:canDriveBesideCombine(self.combineToUnload) or (self.combineToUnload.cp.driver and self.combineToUnload.cp.driver:isWaitingInPocket()) then

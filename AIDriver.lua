@@ -658,6 +658,15 @@ end
 --- When stopped at a wait point, check if the waiting time is over
 -- and continue when needed
 function AIDriver:continueIfWaitTimeIsOver()
+
+
+	-- EBP Addded
+	self:debug('EBP: AT continueIfWaitTimeIsOver -- (timer - movecommandtime) > waittime *1000')
+	self:debug('EBP: Timer Less MoveCommandTime: %d s ',  self.vehicle.timer - self.lastMoveCommandTime )
+	self:debug('EBP: WaitTime: %d s ', self.vehicle.cp.waitTime * 1000 )
+	-- End Add
+
+
 	if self:isAutoContinueAtWaitPointEnabled() then
 		if (self.vehicle.timer - self.lastMoveCommandTime) > self.vehicle.cp.waitTime * 1000 then
 			self:debug('Waiting time of %d s is over, continuing', self.vehicle.cp.waitTime)
