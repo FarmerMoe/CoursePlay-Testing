@@ -2217,13 +2217,13 @@ end;
 
 function courseplay:openClosePipe(vehicle, openPipe)
 	local targetState = 1
-    if openPipe then
-        targetState = 2
-    end
+	if openPipe then
+        	targetState = 2
+    	end
 	for _,trailer in pairs(vehicle.cp.workTools) do
 		if trailer.spec_pipe ~= nil then
-            if trailer.spec_pipe.currentState ~= targetState and trailer:getIsPipeStateChangeAllowed(targetState) then
-                trailer:setPipeState(targetState, false)
+            		if trailer.spec_pipe.currentState ~= targetState and trailer:getIsPipeStateChangeAllowed(targetState) then
+                		trailer:setPipeState(targetState, false)
 			end
 		end
 	end
