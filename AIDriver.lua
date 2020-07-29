@@ -1078,31 +1078,7 @@ function AIDriver:dischargeAtUnloadPoint(dt,unloadPointIx)
 				--if we can't tip here anymore, pull a bit further
 				if tipper.getTipState and tipper:getTipState() == Trailer.TIPSTATE_OPEN and not isTipping then
 					stopForTipping = false
-
-				-- EBP Added
-				if (tipper.typeName == 'augerWagon' or vehicle.workTool.cp.isAugerWagon) then
-					if readyToDischarge and stopForTipping then
-						if (tipper.spec_pipe ~= nil and tipper.spec_pipe.currentState >= 2) then
-							if tipper.cp.fillLevel > 0.1 then
-								tipper:setDischargeState(Dischargeable.DISCHARGE_STATE_OBJECT)
-								tipper:updateNearestObjectInTriggers()
-							end
-						end
-					end
-				else
-
-					--force tipper to tip to ground
-					if tipper.getTipState and (tipper:getTipState() == Trailer.TIPSTATE_CLOSED or tipper:getTipState() == Trailer.TIPSTATE_CLOSING) and readyToDischarge then
-						tipper:setDischargeState(Dischargeable.DISCHARGE_STATE_GROUND)
-					end
-					--if we can't tip here anymore, pull a bit further
-					if tipper.getTipState and tipper:getTipState() == Trailer.TIPSTATE_OPEN and not isTipping then
-						stopForTipping = false
-					end
-
 				end
-				-- EBP End Add
-
 			end
 		end
 	end
@@ -1246,16 +1222,6 @@ function AIDriver:onUnLoadCourse(allowedToDrive, dt)
 	--handle cover and pipe
 	if self:hasTipTrigger() or isNearUnloadPoint then
 		courseplay:openCloseCover(self.vehicle, not courseplay.SHOW_COVERS)
-
-
-		-- EBP: Added
-		if self.vehicle.cp.totalFillLevel > 0 then
-			courseplay:openClosePipe(self.vehicle, courseplay.SHOW_COVERS) -- true -- open pipe
-		else
-			courseplay:openClosePipe(self.vehicle, not courseplay.SHOW_COVERS) -- false -  close pipe
-		end
-		-- EBP: End Add
-
 	end
 
 	-- done tipping?
