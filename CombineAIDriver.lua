@@ -597,7 +597,7 @@ function CombineAIDriver:canUnloadWhileMovingAtWaypoint(ix)
 		self:debug('pipe would be in fruit at the planned rendezvous waypoint %d', ix)
 		return false
 	end
-	if self.fieldworkCourse:isOnHeadland(ix, 1) then
+	if self.vehicle.cp.settings.allowUnloadOnFirstHeadland:is(false) and self.fieldworkCourse:isOnHeadland(ix, 1) then
 		self:debug('planned rendezvous waypoint %d is on first headland, no unloading of moving combine there', ix)
 		return false
 	end
@@ -866,7 +866,7 @@ function CombineAIDriver:startTurn(ix)
 			self:debug('Headland turn but this harvester uses normal turn maneuvers.')
 			self.turnType = self.turnTypes.HEADLAND_NORMAL
 			UnloadableFieldworkAIDriver.startTurn(self, ix)
-		elseif self.course:isOnOutermostHeadland(ix) and self.vehicle.cp.turnOnField then
+		elseif self.course:isOnOutermostHeadland(ix) and self.vehicle.cp.settings.turnOnField:is(true) then
 			self:debug('Creating a pocket in the corner so the combine stays on the field during the turn')
 			self.aiTurn = CombinePocketHeadlandTurn(self.vehicle, self, self.turnContext, self.fieldworkCourse)
 			self.turnType = self.turnTypes.HEADLAND_POCKET
@@ -1514,4 +1514,3 @@ function CombineAIDriver:onDraw()
 
 	UnloadableFieldworkAIDriver.onDraw(self)
 end
-
