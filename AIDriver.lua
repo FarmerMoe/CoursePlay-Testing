@@ -789,8 +789,12 @@ function AIDriver:getDefaultStreetSpeed(ix)
 end
 
 function AIDriver:slowDownForWaitPoints()
-	if self.course:hasWaitPointAround(self.ppc:getCurrentOriginalWaypointIx(), 1, 2) then
-		self:setSpeed(self.vehicle.cp.speeds.turn)
+	if self.course:hasWaitPointAround(self.ppc:getCurrentOriginalWaypointIx(), 1, 2) and self.allowedToDrive then
+		--EBP Added
+		self:debug('EBP: waypoint slowdown engaged')
+		self:setSpeed(3)
+		--EBP Removed
+		--self:setSpeed(self.vehicle.cp.speeds.turn)
 	end
 end
 
