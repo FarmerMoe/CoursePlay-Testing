@@ -1695,9 +1695,20 @@ function CombineUnloadAIDriver:changeToUnloadWhenFull()
 		else
 			self:debug('trailer full, changing to unload course.')
 		end
-		self:releaseUnloader()
-		self:startUnloadCourse()
-		return true
+
+		--EBP: Add code here to handle waiting for combine/chopper to move out of way before releasing
+		self:debug('EBP - Is withing safe moving distance?')
+		if self:isWithinSafeManeuveringDistance(self.combineToUnload) then
+			self:debug('EBP - safe moving distance')
+			self:releaseUnloader()
+			self:startUnloadCourse()
+			return true
+		else
+			self:debug('EBP - Not safe moving distance')
+			return true
+		end
+		-- EBP: End Add
+		
 	end
 	return false
 end
@@ -1800,19 +1811,7 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 	self.combineOffset = self:getPipeOffset(self.combineToUnload)
 	self.followCourse:setOffset(-self.combineOffset, 0)
 
-	if self:changeToUnloadWhenFull() then 
-		self:debug('Finished unloading, move back a bit to make room for it to continue')
-		local reverseCourse = self:getStraightReverseCourse()
-		AIDriver.startCourse(self, reverseCourse,1)
-		return 
-		self:startCourse(reverseCourse,1)
-		self.ppc:setNormalLookaheadDistance()
-		--self.ppc:setNormalLookaheadDistance()
-
-		-- EBP END
-		
-		return
-	end
+	if self:changeToUnloadWhenFull() then return end
 
 	if self:canDriveBesideCombine(self.combineToUnload) or (self.combineToUnload.cp.driver and self.combineToUnload.cp.driver:isWaitingInPocket()) then
 		self:driveBesideCombine()
@@ -1826,6 +1825,10 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 
 	--when the combine is empty, stop and wait for next combine
 	if self:getCombinesFillLevelPercent() <= 0.1 then
+	--when the combine is empty, stop and wait for next combine -- EBP edits from Tkaag
+	if self:getCombinesFillLevelPercent() <= 0.1 
+		--and self:getFillLevelThreshold() > 0 then
+		then
 		--when the combine is in a pocket, make room to get back to course
 		if self.combineToUnload.cp.driver and self.combineToUnload.cp.driver:isWaitingInPocket() then
 			self:debug('combine empty and in pocket, drive back')
