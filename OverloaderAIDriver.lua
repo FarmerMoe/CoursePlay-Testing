@@ -97,6 +97,9 @@ function OverloaderAIDriver:onWaypointPassed(ix)
             self:debug('Wait point reached but my trailer is empty, continuing')
         else
             self:debug('Wait point reached, wait for trailer.')
+            -- EBP Added
+            self:setSpeed(0)
+            -- EBP end
             self.unloadCourseState = self.states.WAITING_FOR_TRAILER
         end
     else
