@@ -1,31 +1,40 @@
 --[[
 This file is part of Courseplay (https://github.com/Courseplay/courseplay)
 Copyright (C) 2020 Thomas Gärtner, Peter Vaiko
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
+
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ]]
 
 --[[
 The CombineUnloadManager dispatches idle unloaders to unload combines.
+
 The combine-unloader association is a many to many association, a combine
 can have any number of unloaders, an unloader can have any number of
 combines associated with it.
+
 Association is driven by the unloader's HUD where the user selects one or
 multiple combines.
+
 When an unloader is done with unloading a combine and has free capacity,
 or just returned from the unload course, it asks the CombineUnloadManager
 for a combine to unload.
+
 Based on the current situation the CombineUnloadManager may assign a combine
 to the unloader but also may just tell it there's nothing to unload
 at the moment.
+
+
 ]]--
 
 ---@class CombineUnloadmanager
@@ -567,6 +576,7 @@ function CombineUnloadManager:getPossibleCombines(vehicle)
 end
 
 g_combineUnloadManager = CombineUnloadManager()
+
 
 
 
