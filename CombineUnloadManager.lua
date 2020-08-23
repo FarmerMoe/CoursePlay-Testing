@@ -1,40 +1,31 @@
 --[[
 This file is part of Courseplay (https://github.com/Courseplay/courseplay)
 Copyright (C) 2020 Thomas Gärtner, Peter Vaiko
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ]]
 
 --[[
 The CombineUnloadManager dispatches idle unloaders to unload combines.
-
 The combine-unloader association is a many to many association, a combine
 can have any number of unloaders, an unloader can have any number of
 combines associated with it.
-
 Association is driven by the unloader's HUD where the user selects one or
 multiple combines.
-
 When an unloader is done with unloading a combine and has free capacity,
 or just returned from the unload course, it asks the CombineUnloadManager
 for a combine to unload.
-
 Based on the current situation the CombineUnloadManager may assign a combine
 to the unloader but also may just tell it there's nothing to unload
 at the moment.
-
-
 ]]--
 
 ---@class CombineUnloadmanager
@@ -197,7 +188,7 @@ end
 function CombineUnloadManager:getChopperWithLeastUnloaders(unloader)
 	local chopperToReturn
 	local amountUnloaders = math.huge
-	for chopper,_ in pairs(unloader.cp.assignedCombines) do
+	for chopper,_ in pairs(unloader.cp.driver:getAssignedCombines()) do
 		local data = self.combines[chopper]
 		if data and data.isChopper then
 			if amountUnloaders > #data.unloaders or #data.unloaders == 0 then
@@ -212,7 +203,7 @@ end
 function CombineUnloadManager:getCombineWithMostFillLevel(unloader)
 	local mostFillLevel = 0
 	local combineToReturn
-	for combine,_ in pairs(unloader.cp.assignedCombines) do
+	for combine,_ in pairs(unloader.cp.driver:getAssignedCombines()) do
 		local data = self.combines[combine]
 		-- if there is no unloader assigned or this unloader is already assigned as the first
 		if data and data.isCombine and (self:getNumUnloaders(combine) == 0 or self:getUnloaderIndex(unloader, combine) == 1) then
@@ -235,7 +226,8 @@ function CombineUnloadManager:getUnloaders(combine)
 		for _, vehicle in pairs(g_currentMission.vehicles) do
 			if vehicle.cp.driver and vehicle.cp.driver:is_a(CombineUnloadAIDriver) then
 				-- TODO: refactor and move assignedCombines into the CombineUnloadAIDriver
-				if vehicle.cp.assignedCombines[combine] then
+				local assignedCombines = vehicle.cp.driver:getAssignedCombines()
+				if assignedCombines[combine] then
 					table.insert(unloaders, vehicle)
 				end
 			end
@@ -575,7 +567,6 @@ function CombineUnloadManager:getPossibleCombines(vehicle)
 end
 
 g_combineUnloadManager = CombineUnloadManager()
-
 
 
 
