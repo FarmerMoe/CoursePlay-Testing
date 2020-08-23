@@ -56,7 +56,6 @@ end
 --[[function courseplay:setNextPrevModeVars(vehicle)
 	local curMode = vehicle.cp.mode;
 	local nextMode, prevMode, nextModeTest, prevModeTest = nil, nil, curMode + 1, curMode - 1;
-
 	if curMode > courseplay.MODE_GRAIN_TRANSPORT then
 		while prevModeTest >= courseplay.MODE_GRAIN_TRANSPORT do
 			if courseplay:getCanVehicleUseMode(vehicle, prevModeTest) then
@@ -69,7 +68,6 @@ end
 		end;
 	end;
 	vehicle.cp.prevMode = prevMode;
-
 	if curMode < courseplay.NUM_MODES then
 		while nextModeTest <= courseplay.NUM_MODES do
 			if courseplay:getCanVehicleUseMode(vehicle, nextModeTest) then
@@ -101,7 +99,6 @@ end;]]
 	elseif mode ~= courseplay.MODE_TRANSPORT and (vehicle.cp.isWoodHarvester or vehicle.cp.isWoodForwarder) then
 		return false;
 	end;
-
 	return true;
 end;]]
 
@@ -3356,7 +3353,6 @@ function CrawlSpeedSetting:init(vehicle)
 	SpeedSetting.init(self, 'crawlSpeed','COURSEPLAY_MODE10_MAX_BUNKERSPEED', 'COURSEPLAY_MODE10_MAX_BUNKERSPEED', vehicle,3,20) 
 	
 end
-
 ---@class DischargeSpeedSetting : SpeedSetting
 DischargeSpeedSetting = CpObject(SpeedSetting)
 function DischargeSpeedSetting:init(vehicle)

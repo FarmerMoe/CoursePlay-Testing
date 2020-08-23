@@ -1444,6 +1444,14 @@ function CombineUnloadAIDriver:startDrivingToCombine()
 		else
 			self:debug('can\'t find rendezvous waypoint to combine, waiting')
 			self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
+			self:debug('can\'t find rendezvous waypoint to combine, waiting ... EBP TEST pathfinding to current combine point')
+			
+			--EBP test
+			--self:startPathfindingToCombine(self.onPathfindingDoneToCombine, nil, -8)
+			self:startPathfindingToCombine(self.onPathfindingDoneToCombine,  xOffset, zOffset)
+			--EBP note if pipe is in fruit then gets to combine but stops blocking unload until change to stopped unload
+			
+			--self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
 		end
 	end
 end
@@ -1700,9 +1708,20 @@ function CombineUnloadAIDriver:changeToUnloadWhenFull()
 		else
 			self:debug('trailer full, changing to unload course.')
 		end
-		self:releaseUnloader()
-		self:startUnloadCourse()
-		return true
+
+		--EBP: Add code here to handle waiting for combine/chopper to move out of way before releasing
+		self:debug('EBP - Is withing safe moving distance?')
+		if self:isWithinSafeManeuveringDistance(self.combineToUnload) then
+			self:debug('EBP - safe moving distance')
+			self:releaseUnloader()
+			self:startUnloadCourse()
+			return true
+		else
+			self:debug('EBP - Not safe moving distance')
+			return true
+		end
+		-- EBP: End Add
+		
 	end
 	return false
 end
@@ -1819,6 +1838,10 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 
 	--when the combine is empty, stop and wait for next combine
 	if self:getCombinesFillLevelPercent() <= 0.1 then
+	--when the combine is empty, stop and wait for next combine -- EBP edits from Tkaag
+	if self:getCombinesFillLevelPercent() <= 0.1 
+		--and self:getFillLevelThreshold() > 0 then
+		then
 		--when the combine is in a pocket, make room to get back to course
 		if self.combineToUnload.cp.driver and self.combineToUnload.cp.driver:isWaitingInPocket() then
 			self:debug('combine empty and in pocket, drive back')

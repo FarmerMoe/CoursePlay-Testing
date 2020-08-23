@@ -6,7 +6,7 @@
 out
 reload/venv
 reload.xml
-
+*.zip
 
 # Windows image file caches
 Thumbs.db

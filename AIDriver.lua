@@ -693,6 +693,15 @@ end
 --- When stopped at a wait point, check if the waiting time is over
 -- and continue when needed
 function AIDriver:continueIfWaitTimeIsOver()
+
+
+	-- EBP Addded
+	self:debug('EBP: AT continueIfWaitTimeIsOver -- (timer - movecommandtime) > waittime *1000')
+	self:debug('EBP: Timer Less MoveCommandTime: %d s ',  self.vehicle.timer - self.lastMoveCommandTime )
+	self:debug('EBP: WaitTime: %d s ', self.vehicle.cp.waitTime * 1000 )
+	-- End Add
+
+
 	if self:isAutoContinueAtWaitPointEnabled() then
 		if (self.vehicle.timer - self.lastMoveCommandTime) > self.vehicle.cp.waitTime * 1000 then
 			self:debug('Waiting time of %d s is over, continuing', self.vehicle.cp.waitTime)
@@ -813,8 +822,12 @@ function AIDriver:getDefaultStreetSpeed(ix)
 end
 
 function AIDriver:slowDownForWaitPoints()
-	if self.course:hasWaitPointAround(self.ppc:getCurrentOriginalWaypointIx(), 1, 2) then
-		self:setSpeed(self.vehicle.cp.speeds.turn)
+	if self.course:hasWaitPointAround(self.ppc:getCurrentOriginalWaypointIx(), 1, 2) and self.allowedToDrive then
+		--EBP Added
+		self:debug('EBP: waypoint slowdown engaged')
+		self:setSpeed(3)
+		--EBP Removed
+		--self:setSpeed(self.vehicle.cp.speeds.turn)
 	end
 end
 
@@ -1244,9 +1257,12 @@ function AIDriver:onUnLoadCourse(allowedToDrive, dt)
 	local isNearUnloadPoint, unloadPointIx = self.course:hasUnloadPointWithinDistance(self.ppc:getCurrentWaypointIx(),20)
 	self:setSpeed(self:getRecordedSpeed())
 	--handle cover
+
+	--handle cover and pipe
 	if self:hasTipTrigger() or isNearUnloadPoint then
 		courseplay:openCloseCover(self.vehicle, not courseplay.SHOW_COVERS)
 	end
+
 	-- done tipping?
 	if self:hasTipTrigger() and self.vehicle.cp.totalFillLevel == 0 and self:getHasAllTippersClosed() then
 		courseplay:resetTipTrigger(self.vehicle, true);
