@@ -3359,6 +3359,7 @@ function DischargeSpeedSetting:init(vehicle)
 	SpeedSetting.init(self, 'dischargeSpeed','COURSEPLAY_MODE10_MAX_BUNKERSPEED', 'COURSEPLAY_MODE10_MAX_BUNKERSPEED', vehicle,3,20) 
 	
 end
+
 ---@class ApproachSpeedSetting : SpeedSetting
 ApproachSpeedSetting = CpObject(SpeedSetting)
 function ApproachSpeedSetting:init(vehicle)
