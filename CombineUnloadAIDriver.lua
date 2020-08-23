@@ -1838,10 +1838,6 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 
 	--when the combine is empty, stop and wait for next combine
 	if self:getCombinesFillLevelPercent() <= 0.1 then
-	--when the combine is empty, stop and wait for next combine -- EBP edits from Tkaag
-	if self:getCombinesFillLevelPercent() <= 0.1 
-		--and self:getFillLevelThreshold() > 0 then
-		then
 		--when the combine is in a pocket, make room to get back to course
 		if self.combineToUnload.cp.driver and self.combineToUnload.cp.driver:isWaitingInPocket() then
 			self:debug('combine empty and in pocket, drive back')
