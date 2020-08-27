@@ -161,9 +161,15 @@ function CombineAIDriver:start(startingPoint)
 	self:clearAllUnloaderInformation()
 	self:addBackwardProximitySensor()
 	UnloadableFieldworkAIDriver.start(self, startingPoint)
+	self:fixMaxRotationLimit()
 	local total, pipeInFruit = self.fieldworkCourse:setPipeInFruitMap(self.pipeOffsetX, self.vehicle.cp.workWidth)
 	self:debug('Pipe in fruit map created, there are %d non-headland waypoints, of which at %d the pipe will be in the fruit',
 			total, pipeInFruit)
+end
+
+function CombineAIDriver:stop(msgReference)
+	self:resetFixMaxRotationLimit()
+	AIDriver.stop(self,msgReference)
 end
 
 function CombineAIDriver:setHudContent()
@@ -1331,6 +1337,25 @@ function CombineAIDriver:fixDischargeDistance(dischargeNode)
 	end
 end
 
+--- Make life easier for unloaders, increases reach of the pipe
+function CombineAIDriver:fixMaxRotationLimit()
+	local LastPipeNode = self.pipe.nodes and self.pipe.nodes[#self.pipe.nodes]
+	if self:isChopper() and LastPipeNode and LastPipeNode.maxRotationLimits then
+		self.oldLastPipeNodeMaxRotationLimit = LastPipeNode.maxRotationLimits
+        self:debug('Chopper fix maxRotationLimits, old Values: x=%s, y= %s, z =%s', tostring(LastPipeNode.maxRotationLimits[1]), tostring(LastPipeNode.maxRotationLimits[2]), tostring(LastPipeNode.maxRotationLimits[3]))
+        LastPipeNode.maxRotationLimits = nil   
+    end
+end
+
+function CombineAIDriver:resetFixMaxRotationLimit()
+	local LastPipeNode = self.pipe.nodes and self.pipe.nodes[#self.pipe.nodes]
+	if LastPipeNode and self.oldLastPipeNodeMaxRotationLimit then 
+		LastPipeNode.maxRotationLimits = self.oldLastPipeNodeMaxRotationLimit
+		self:debug('Chopper: reset maxRotationLimits is x=%s, y= %s, z =%s', tostring(LastPipeNode.maxRotationLimits[1]), tostring(LastPipeNode.maxRotationLimits[3]), tostring(LastPipeNode.maxRotationLimits[3]))
+		self.oldLastPipeNodeMaxRotationLimit = nil
+	end
+end
+
 --- Offset of the pipe from the combine implement's root node
 ---@param additionalOffsetX number add this to the offsetX if you don't want to be directly under the pipe. If
 --- greater than 0 -> to the left, less than zero -> to the right
@@ -1429,7 +1454,7 @@ function CombineAIDriver:isReadyToUnload(noUnloadWithPipeInFruit)
 		local dToNextTurn = self.fieldworkCourse:getDistanceToNextTurn(ix)
 		-- if distance to last turn is not known then we are ok. If it is known and the turn
 		-- is close, we aren't ready.
-		if dToNextTurn < 10 then
+		if dToNextTurn and dToNextTurn < 10 then
 			self:debugSparse('isReadyToUnload(): too close to turn')
 			return false
 		else
