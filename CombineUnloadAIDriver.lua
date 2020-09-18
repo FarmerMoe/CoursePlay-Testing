@@ -1414,8 +1414,14 @@ function CombineUnloadAIDriver:startDrivingToCombine()
 			self:startPathfinding(rendezvousWaypoint, xOffset, zOffset, 0,
 					self.combineToUnload, self.onPathfindingDoneToMovingCombine)
 		else
-			self:debug('can\'t find rendezvous waypoint to combine, waiting')
-			self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
+			self:debug('can\'t find rendezvous waypoint to combine, waiting ... EBP TEST pathfinding to current combine point')
+			
+			--EBP test
+			--self:startPathfindingToCombine(self.onPathfindingDoneToCombine, nil, -8)
+			self:startPathfindingToCombine(self.onPathfindingDoneToCombine,  xOffset, zOffset)
+			--EBP note if pipe is in fruit then gets to combine but stops blocking unload until change to stopped unload
+			
+			--self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
 		end
 	end
 end
@@ -1678,6 +1684,23 @@ function CombineUnloadAIDriver:changeToUnloadWhenFull()
 			self:startUnloadCourse()
 		end
 		return true
+
+
+		--EBP: Add code here to handle waiting for combine/chopper to move out of way before releasing
+		--self:debug('EBP - Is withing safe moving distance?')
+		--if self:isWithinSafeManeuveringDistance(self.combineToUnload) then
+		--	self:debug('EBP - safe moving distance')
+		--	self:releaseUnloader()
+		--	self:startUnloadCourse()
+		--	return true
+		--else
+		--	self:debug('EBP - Not safe moving distance')
+		--	return true
+		--end
+		-- EBP: End Add
+
+
+
 	end
 	return false
 end
