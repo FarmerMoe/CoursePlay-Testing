@@ -147,11 +147,12 @@ function CpManager:deleteMap()
 	courseplay.courses.batchWriteSize = nil;
 
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	-- deactivate debug channels
-	for channel,_ in pairs(courseplay.debugChannels) do
-		courseplay.debugChannels[channel] = false;
-	end;
-
+	if courseplay.debugChannels then
+		-- deactivate debug channels
+		for channel,_ in pairs(courseplay.debugChannels) do
+			courseplay.debugChannels[channel] = false;
+		end;
+	end
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-- delete vehicles' button overlays
 	for i,vehicle in pairs(g_currentMission.vehicles) do
@@ -658,12 +659,13 @@ function CpManager:loadFile(fileName)
 end
 
 function CpManager:loadAIDriver()
-	self:loadFile()
+	local result = self:loadFile()
 	if g_currentMission.controlledVehicle then
 		-- re-instantiate the AIDriver after loaded
 		courseplay:setAIDriver(g_currentMission.controlledVehicle, g_currentMission.controlledVehicle.cp.mode)
 		g_combineUnloadManager:addNewCombines()
 	end
+	return result
 end
 
 function CpManager:saveVehiclePositions()

@@ -65,8 +65,16 @@ function CombineAIDriver:init(vehicle)
 		self.combine = self.vehicle.spec_combine
 	else
 		local combineImplement = AIDriverUtil.getAIImplementWithSpecialization(self.vehicle, Combine)
+        local peletizerImplement = FS19_addon_strawHarvest and
+				AIDriverUtil.getAIImplementWithSpecialization(self.vehicle, FS19_addon_strawHarvest.StrawHarvestPelletizer) or nil
 		if combineImplement then
 			self.combine = combineImplement.spec_combine
+        elseif peletizerImplement then
+            self.combine = peletizerImplement
+            self.combine.fillUnitIndex = 1
+            self.combine.spec_aiImplement.rightMarker = self.combine.rootNode
+            self.combine.spec_aiImplement.leftMarker  = self.combine.rootNode
+            self.combine.spec_aiImplement.backMarker  = self.combine.rootNode
 		else
 			self:error('Vehicle is not a combine and could not find implement with spec_combine')
 		end
@@ -108,7 +116,7 @@ function CombineAIDriver:init(vehicle)
 		local dischargeNode = self.combine:getCurrentDischargeNode()
 		self:fixDischargeDistance(dischargeNode)
 		local dx, _, _ = localToLocal(dischargeNode.node, self.combine.rootNode, 0, 0, 0)
-		self.pipeOnLeftSide = dx > 0
+		self.pipeOnLeftSide = dx >= 0
 		self:debug('Pipe on left side %s', tostring(self.pipeOnLeftSide))
 		-- use self.combine so attached harvesters have the offset relative to the harvester's root node
 		-- (and thus, does not depend on the angle between the tractor and the harvester)
@@ -184,8 +192,8 @@ function CombineAIDriver:drive(dt)
 		-- Give up all reservations while not moving (and do not reserve anything)
 		self:resetTrafficControl()
 	elseif not self:trafficControlOK() then
-		self:debugSparse('holding due to traffic')
-		self:hold()
+		self:debugSparse('would be holding due to traffic')
+		--self:hold()
 	end
 	-- the rest is the same as the parent class
 	UnloadableFieldworkAIDriver.drive(self, dt)
@@ -868,7 +876,7 @@ function CombineAIDriver:startTurn(ix)
 
 	self:setMarkers()
 	self.turnContext = TurnContext(self.course, ix, self.aiDriverData, self.vehicle.cp.workWidth, self.frontMarkerDistance,
-			self:getTurnEndSideOffset())
+			self:getTurnEndSideOffset(), self:getTurnEndForwardOffset())
 
 	-- Combines drive special headland corner maneuvers, except potato and sugarbeet harvesters
 	if self.turnContext:isHeadlandCorner() then
@@ -1004,7 +1012,8 @@ function CombineAIDriver:handlePipe()
 end
 
 function CombineAIDriver:handleCombinePipe()
-	if self:isFillableTrailerUnderPipe() or self:isAutoDriveWaitingForPipe() or (self:isWaitingForUnload() and self.vehicle.cp.settings.pipeAlwaysUnfold:is(true)) then
+    
+  if self:isFillableTrailerUnderPipe() or self:isAutoDriveWaitingForPipe() or (self:isWaitingForUnload() and self.vehicle.cp.settings.pipeAlwaysUnfold:is(true)) then
 		self:openPipe()
 	else
 		--wait until the objects under the pipe are gone
@@ -1078,6 +1087,11 @@ function CombineAIDriver:closePipe()
 		self:debug('Closing pipe')
 		self.objectWithPipe:setPipeState(AIDriverUtil.PIPE_STATE_CLOSED)
 	end
+end
+
+function CombineAIDriver:isPipeMoving()
+	if not self:needToOpenPipe() then return end
+	return self.pipe.currentState == AIDriverUtil.PIPE_STATE_MOVING
 end
 
 function CombineAIDriver:shouldStopForUnloading(pc)
@@ -1427,7 +1441,7 @@ end
 --- @param noUnloadWithPipeInFruit boolean pipe must not be in fruit for unload
 function CombineAIDriver:isReadyToUnload(noUnloadWithPipeInFruit)
 	-- no unloading when not in a safe state (like turning)
-	-- in this states we are always ready
+	-- in these states we are always ready
 	if self:willWaitForUnloadToFinish() then return true end
 
 	-- but, if we are full and waiting for unload, we have no choice, we must be ready ...
@@ -1449,17 +1463,10 @@ function CombineAIDriver:isReadyToUnload(noUnloadWithPipeInFruit)
 	end
 
     -- around a turn, for example already working on the next row but not done with the turn yet
-    local ix = self.ppc:getRelevantWaypointIx()
-	if ix then
-		local dToNextTurn = self.fieldworkCourse:getDistanceToNextTurn(ix)
-		-- if distance to last turn is not known then we are ok. If it is known and the turn
-		-- is close, we aren't ready.
-		if dToNextTurn and dToNextTurn < 10 then
-			self:debugSparse('isReadyToUnload(): too close to turn')
-			return false
-		else
-			return true
-		end
+
+	if self.fieldworkCourse:isCloseToNextTurn(10) then
+		self:debugSparse('isReadyToUnload(): too close to turn')
+		return false
 	end
 	-- safe default, better than block unloading
 	self:debugSparse('isReadyToUnload(): defaulting to ready to unload')
