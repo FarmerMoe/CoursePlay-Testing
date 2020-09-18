@@ -191,14 +191,18 @@ function AIDriver:updateLoadingText()
 	end
 end
 
-function AIDriver:writeUpdateStream(streamId)
+function AIDriver:writeUpdateStream(streamId, connection, dirtyMask)
 	self.triggerHandler:writeUpdateStream(streamId)
 	streamWriteString(streamId,self.state.name)
-	streamWriteBool(streamId,self.active)
+	if self.active then 
+		streamWriteBool(streamId,true)
+	else 
+		streamWriteBool(streamId,false)
+	end
 --	streamWriteBool(streamId,self.vehicle.cp.isDriving)
 end 
 
-function AIDriver:readUpdateStream(streamId)
+function AIDriver:readUpdateStream(streamId, timestamp, connection)
 	self.triggerHandler:readUpdateStream(streamId)
 	local nameState = streamReadString(streamId)
 	self.state = self.states[nameState]
@@ -390,6 +394,11 @@ function AIDriver:update(dt)
 	self:updateLoadingText()
 	self.triggerHandler:onUpdate(dt)
 --	self:resetEmergencyBrake()
+end
+
+--- UpdateTick AI driver
+function AIDriver:updateTick(dt)
+	self.triggerHandler:onUpdateTick(dt)
 end
 
 --- UpdateTick AI driver
