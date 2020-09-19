@@ -533,7 +533,7 @@ function courseplay:onLoad(savegame)
 	self.cp.settings:addSetting(PipeAlwaysUnfoldSetting, self)
 	self.cp.settings:addSetting(RidgeMarkersAutomatic, self)
 	self.cp.settings:addSetting(StopForUnloadSetting, self)
-	self.cp.settings:addSetting(StrawOnHeadland, self)
+	self.cp.settings:addSetting(StrawSwathSetting, self)
 	self.cp.settings:addSetting(AllowUnloadOnFirstHeadlandSetting, self)
 	self.cp.settings:addSetting(SowingMachineFertilizerEnabled, self)
 	self.cp.settings:addSetting(EnableOpenHudWithMouseVehicle, self)
@@ -614,7 +614,9 @@ function courseplay:onDraw()
 
 	courseplay:showAIMarkers(self)
 	courseplay:showTemporaryMarkers(self)
-
+	if self.cp.driver then 
+		self.cp.driver.triggerHandler:onDraw()
+	end
 	local isDriving = self:getIsCourseplayDriving();
 
 	--WORKWIDTH DISPLAY
@@ -915,11 +917,14 @@ function courseplay:drawWaypointsLines(vehicle)
 	end;
 end;
 
-function courseplay:onUpdate(dt)
-	
+function courseplay:onUpdate(dt)	
 	if g_server == nil and self.isPostSynced == nil then 
 		self.cp.driver:postSync()
 		self.isPostSynced=true
+	end
+
+	if self.cp.infoText ~= nil then
+		self.cp.infoText = nil
 	end
 
 	if self.cp.drawCourseMode == courseplay.COURSE_2D_DISPLAY_DBGONLY or self.cp.drawCourseMode == courseplay.COURSE_2D_DISPLAY_BOTH then
@@ -1241,7 +1246,8 @@ function courseplay:onReadStream(streamId, connection)
 			self.cp.currentCourseName = string.format("%d %s", self.cp.numCourses, courseplay:loc('COURSEPLAY_COMBINED_COURSES'));
 		end
 	end
-
+	-- SETUP 2D COURSE DRAW DATA
+	self.cp.course2dUpdateDrawData = true;
 	
 	local debugChannelsString = streamDebugReadString(streamId)
 	for k,v in pairs(StringUtil.splitString(",", debugChannelsString)) do
