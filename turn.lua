@@ -36,14 +36,6 @@ function courseplay:turn(vehicle, dt, turnContext)
 		vehicle.cp.courseWorkWidth = vehicle.cp.workWidth;
 	end;
 
-	-- find out the headland height to figure out if we have enough room on the headland to make turns
-	if vehicle.cp.courseWorkWidth and vehicle.cp.courseWorkWidth > 0 and vehicle.cp.courseNumHeadlandLanes and vehicle.cp.courseNumHeadlandLanes > 0 then
-		-- First headland is only half the work width
-		vehicle.cp.headlandHeight = vehicle.cp.courseWorkWidth / 2 + ((vehicle.cp.courseNumHeadlandLanes - 1) * vehicle.cp.courseWorkWidth)
-	else
-		vehicle.cp.headlandHeight = 0
-	end
-
 	--- Get front and back markers
 	local frontMarker = Utils.getNoNil(vehicle.cp.aiFrontMarker, -3);
 	local backMarker = Utils.getNoNil(vehicle.cp.backMarkerOffset,0);
@@ -131,13 +123,26 @@ function courseplay:turn(vehicle, dt, turnContext)
 		turnInfo.reverseWPChangeDistance 		= 0.5
 		turnInfo.direction 						= -1;
 		turnInfo.haveHeadlands 					= courseplay:haveHeadlands(vehicle);
+
+		-- find out the headland height to figure out if we have enough room on the headland to make turns
+		if vehicle.cp.courseWorkWidth and vehicle.cp.courseWorkWidth > 0 and vehicle.cp.courseNumHeadlandLanes and vehicle.cp.courseNumHeadlandLanes > 0 then
+			-- First headland is only half the work width
+			turnInfo.headlandHeight = vehicle.cp.courseWorkWidth / 2 + ((vehicle.cp.courseNumHeadlandLanes - 1) * vehicle.cp.courseWorkWidth)
+		else
+			turnInfo.headlandHeight = 0
+		end
+
+		-- if the headland is not perpendicular, we have less room to turn
+		turnInfo.headlandHeight = turnInfo.headlandHeight * math.cos(turnContext:getHeadlandAngle())
+
 		-- Headland height in the waypoint overrides the generic headland height calculation. This is for the
 		-- short edge headlands where we make 180 turns on te headland course. The generic calculation would use
 		-- the number of headlands and think there is room on the headland to make the turn.
 		-- Therefore, the course generator will add a headlandHeightForTurn = 0 for these turn waypoints to make
 		-- sure on field turns are calculated correctly.
 		turnInfo.headlandHeight 				= turnContext.turnStartWp.headlandHeightForTurn and
-				turnContext.turnStartWp.headlandHeightForTurn or vehicle.cp.headlandHeight;
+				turnContext.turnStartWp.headlandHeightForTurn or turnInfo.headlandHeight;
+
 		turnInfo.numLanes ,turnInfo.onLaneNum 	= courseplay:getLaneInfo(vehicle);
 		turnInfo.turnOnField 					= vehicle.cp.settings.turnOnField:is(true);
 		turnInfo.reverseOffset 					= 0;
@@ -597,7 +602,7 @@ function courseplay:generateTurnTypeQuestionmarkTurn(vehicle, turnInfo)
 	local center1, center2, startDir, stopDir = {}, {}, {}, {};
 
 	local isReverseingBaleLoader = turnInfo.reversingWorkTool and courseplay:isBaleLoader(turnInfo.reversingWorkTool)
-
+	
 	--- Get the Triangle sides
 	local centerOffset = (turnInfo.targetDeltaX * turnInfo.direction) - turnInfo.turnRadius;
 	local sideC = turnInfo.turnDiameter;
@@ -607,7 +612,7 @@ function courseplay:generateTurnTypeQuestionmarkTurn(vehicle, turnInfo)
 
 	--- Check if we can turn on the headlands
 	local spaceNeeded = 0;
-	if vehicle.cp.oppositeTurnMode or isReverseingBaleLoader then
+	if vehicle.cp.settings.oppositeTurnMode:is(true) or isReverseingBaleLoader then
 		spaceNeeded = -turnInfo.zOffset + centerHeight + turnInfo.turnRadius + turnInfo.halfVehicleWidth;
 	else
 		spaceNeeded = -turnInfo.zOffset + turnInfo.turnRadius + turnInfo.halfVehicleWidth;
@@ -650,7 +655,7 @@ function courseplay:generateTurnTypeQuestionmarkTurn(vehicle, turnInfo)
 	local width = vehicle.cp.courseWorkWidth * 0.5;
 	local doNormalTurn = true;
 	local widthNeeded = turnInfo.turnDiameter + turnInfo.halfVehicleWidth - vehicle.cp.courseWorkWidth;
-	if vehicle.cp.oppositeTurnMode then
+	if vehicle.cp.settings.oppositeTurnMode:is(true) then
 		width = turnInfo.onLaneNum * vehicle.cp.courseWorkWidth - (vehicle.cp.courseWorkWidth * 0.5);
 		doNormalTurn = (turnInfo.haveHeadlands and widthNeeded > (width + turnInfo.headlandHeight) or widthNeeded > width);
 		courseplay:debug(("%s:(Turn) doNormalTurn=%s, haveHeadlands=%s, %.1fm > %.1fm"):format(nameNum(vehicle), tostring(doNormalTurn), tostring(turnInfo.haveHeadlands), widthNeeded, (turnInfo.haveHeadlands and (width + turnInfo.headlandHeight) or width)), 14);
@@ -866,7 +871,7 @@ function courseplay:generateTurnTypeForward3PointTurn(vehicle, turnInfo)
 		local width = vehicle.cp.courseWorkWidth * 0.5;
 		local doNormalTurn = true;
 		local widthNeeded = turnInfo.turnDiameter + turnInfo.halfVehicleWidth - vehicle.cp.courseWorkWidth;
-		if vehicle.cp.oppositeTurnMode then
+		if vehicle.cp.settings.oppositeTurnMode:is(true) then
 			width = turnInfo.onLaneNum * vehicle.cp.courseWorkWidth - (vehicle.cp.courseWorkWidth * 0.5);
 			doNormalTurn = widthNeeded > width;
 			courseplay:debug(("%s:(Turn) doNormalTurn=%s, %.1fm > %.1fm"):format(nameNum(vehicle), tostring(doNormalTurn), widthNeeded, width), 14);
@@ -992,7 +997,7 @@ function courseplay:generateTurnTypeReverse3PointTurn(vehicle, turnInfo)
 	local doNormalTurn = true;
 	local widthNeeded = turnInfo.turnDiameter + turnInfo.halfVehicleWidth - vehicle.cp.courseWorkWidth;
 	-- TODO: even if getLaneInfo() was working correctly, this part only works for rectangular fields
-	if vehicle.cp.oppositeTurnMode then
+	if vehicle.cp.settings.oppositeTurnMode:is(true) then
 		width = turnInfo.onLaneNum * vehicle.cp.courseWorkWidth - (vehicle.cp.courseWorkWidth * 0.5);
 		doNormalTurn = widthNeeded > width;
 		courseplay:debug(("%s:(Turn) doNormalTurn=%s, %.1fm > %.1fm"):format(nameNum(vehicle), tostring(doNormalTurn), widthNeeded, width), 14);
@@ -2214,12 +2219,22 @@ function TurnContext:getDistanceToFieldEdge(node)
 		local x, _, z = localToWorld(node, 0, 0, d)
 		local isField, area, totalArea = courseplay:isField(x, z, 1, 1)
 		if d == 0 and not isField then
+			self:debug('Vehicle not on field, search backwards')
+			for db = 0, 50, 1 do
+				x, _, z = localToWorld(node, 0, 0, -db)
+				isField, area, totalArea = courseplay:isField(x, z, 1, 1)
+				local fieldRatio = area / totalArea
+				if isField or fieldRatio > 0.5 then
+					self:debug('Field edge is at %d m (behind us), ratio %.2f', -db, fieldRatio)
+					return -db
+				end
+			end
 			self:debug('Field edge not found (vehicle not on field)')
 			return nil
 		end
 		local fieldRatio = area / totalArea
 		if not isField or fieldRatio < 0.5 then
-			self:debug('Field edge is at %d m, ratio %.2f', d, fieldRatio)
+			self:debug('Field edge is at %d m (in front of us), ratio %.2f', d, fieldRatio)
 			return d
 		end
 	end
