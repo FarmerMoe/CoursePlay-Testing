@@ -312,21 +312,6 @@ function AIDriver:stop(msgReference)
 	self.state = self.states.STOPPED
 end
 
-function AIDriver:setEmergencyBrake()
-	local brakeForce = self.vehicle.spec_motorized.brakeForce
-	if brakeForce ~= self.EMERGENCY_BRAKE_FORCE and self.vehicle:getLastSpeed() >= 0.1 then 
-		brakeForce = self.EMERGENCY_BRAKE_FORCE
-		self:setSpeed(0)
-	end
-end
-
-function AIDriver:resetEmergencyBrake()
-	local brakeForce = self.vehicle.spec_motorized.brakeForce
-	if self.vehicle:getLastSpeed() < 0.1 and brakeForce == self.EMERGENCY_BRAKE_FORCE then 
-		brakeForce = self.normalBrakeForce
-	end
-end
-
 --- Stop the driver when the work is done. Could just dismiss at this point,
 --- the only reason we are still active is that we are displaying the info text while waiting to be dismissed
 function AIDriver:setDone(msgReference)
@@ -394,11 +379,6 @@ function AIDriver:update(dt)
 	self:updateLoadingText()
 	self.triggerHandler:onUpdate(dt)
 	self:shouldDriverBeReleased()
-end
-
---- UpdateTick AI driver
-function AIDriver:updateTick(dt)
-	self.triggerHandler:onUpdateTick(dt)
 end
 
 --- UpdateTick AI driver
@@ -853,12 +833,8 @@ function AIDriver:getDefaultStreetSpeed(ix)
 end
 
 function AIDriver:slowDownForWaitPoints()
-	if self.course:hasWaitPointAround(self.ppc:getCurrentOriginalWaypointIx(), 1, 2) and self.allowedToDrive then
-		--EBP Added
-		self:debug('EBP: waypoint slowdown engaged')
-		self:setSpeed(3)
-		--EBP Removed
-		--self:setSpeed(self.vehicle.cp.speeds.turn)
+	if self.course:hasWaitPointAround(self.ppc:getCurrentOriginalWaypointIx(), 1, 2) then
+		self:setSpeed(self.vehicle.cp.speeds.turn)
 	end
 end
 
@@ -1288,12 +1264,9 @@ function AIDriver:onUnLoadCourse(allowedToDrive, dt)
 	local isNearUnloadPoint, unloadPointIx = self.course:hasUnloadPointWithinDistance(self.ppc:getCurrentWaypointIx(),20)
 	self:setSpeed(self:getRecordedSpeed())
 	--handle cover
-
-	--handle cover and pipe
 	if self:hasTipTrigger() or isNearUnloadPoint then
 		courseplay:openCloseCover(self.vehicle, not courseplay.SHOW_COVERS)
 	end
-
 	-- done tipping?
 	if self:hasTipTrigger() and self.vehicle.cp.totalFillLevel == 0 and self:getHasAllTippersClosed() then
 		courseplay:resetTipTrigger(self.vehicle, true);
