@@ -2238,6 +2238,64 @@ function HeadlandOverlapPercent:init(vehicle)
 	self:set(7)
 end
 
+--- Course generator settings (read from the XML, may be added to the UI later when needed):
+---
+--- Minimum radius in meters where a lane change on the headland is allowed. This is to ensure that
+--- we only change lanes on relatively straight sections of the headland (not around corners)
+---@class HeadlandLaneChangeMinRadius
+HeadlandLaneChangeMinRadius = CpObject(IntSetting)
+
+function HeadlandLaneChangeMinRadius:init()
+	IntSetting.init(self, 'headlandLaneChangeMinRadius', 'HeadlandLaneChangeMinRadius',
+			'Minimum radius where a lane change on the headland is allowed')
+	self:set(20)
+end
+
+--- No lane change allowed on the headland if there is a corner ahead within this distance in meters
+---@class HeadlandLaneChangeMinDistanceToCorner
+HeadlandLaneChangeMinDistanceToCorner = CpObject(IntSetting)
+function HeadlandLaneChangeMinDistanceToCorner:init()
+	IntSetting.init(self, 'headlandLaneChangeMinDistanceToCorner', 'HeadlandLaneChangeMinDistanceToCorner',
+			'Minimum distance to a corner for a lane change on the headland')
+	self:set(20)
+end
+
+--- No lane change allowed on the headland if there is a corner behind within this distance in meters
+---@class HeadlandLaneChangeMinDistanceFromCorner
+HeadlandLaneChangeMinDistanceFromCorner = CpObject(IntSetting)
+function HeadlandLaneChangeMinDistanceFromCorner:init()
+	IntSetting.init(self, 'headlandLaneChangeMinDistanceFromCorner', 'HeadlandLaneChangeMinDistanceFromCorner',
+			'Minimum distance from a corner for a lane change on the headland')
+	self:set(10)
+end
+
+--- Pathfinder parameters settings (read from the XML, may be added to the UI later when needed):
+---
+
+--- The hybrid A* algorithm's default delta angle at the goal is 6 degrees, meaning the goal node must
+--- be within this angle for the goal to be considered as reached. This may lead to very long or completely
+--- unsuccessful path finding if the goal is close to an obstacle for example.
+--- We'll therefore start relaxing this criteria so bigger angle differences are acceptable as the pathfinder
+--- number of unsuccessful iterations grow.
+---
+--- This is a factor at which we increase the goal angle difference, a value of 0 won't change it.
+---@class DeltaAngleRelaxfactor
+DeltaAngleRelaxFactor = CpObject(FloatSetting)
+function DeltaAngleRelaxFactor:init()
+	IntSetting.init(self, 'deltaAngleRelaxFactor', 'DeltaAngleRelaxFactor',
+			'Factor to decrease pathfinder accuracy with unsuccessful iterations')
+	self:set(10)
+end
+
+--- Maximum value of the delta angle at the goal in radians, see above.
+---@class MaxDeltaAngleAtGoal
+MaxDeltaAngleAtGoal = CpObject(FloatSetting)
+function MaxDeltaAngleAtGoal:init()
+	IntSetting.init(self, 'maxDeltaAngleAtGoal', 'MaxDeltaAngleAtGoal',
+			'Maximum angle difference allowed at goal')
+	self:set(math.pi / 2)
+end
+
 --toggleHeadlandDirection
 --toggleHeadlandOrder
 
@@ -2279,12 +2337,44 @@ function ImplementLowerTimeSetting:init(vehicle)
 	self:set(ImplementRaiseLowerTimeSetting.LATE)
 end
 
+---@class FoldImplementAtEndSetting : BooleanSetting
+FoldImplementAtEndSetting = CpObject(BooleanSetting)
+function FoldImplementAtEndSetting:init()
+	BooleanSetting.init(self, 'foldImplementAtEnd', 'COURSEPLAY_SHOULD_FOLD_IMPLEMENT',
+		'COURSEPLAY_SHOULD_FOLD_IMPLEMENT_TOOLTIP', nil)
+	self:set(true)
+end
+
 --- Return to first point after finishing fieldwork
----@class ReturnToFirstPointSetting : BooleanSetting
-ReturnToFirstPointSetting = CpObject(BooleanSetting)
+---@class ReturnToFirstPointSetting : SettingList
+ReturnToFirstPointSetting = CpObject(SettingList)
+ReturnToFirstPointSetting.DEACTIVED = 0
+ReturnToFirstPointSetting.RETURN_TO_START = 1
+ReturnToFirstPointSetting.RELEASE_DRIVER = 2
+ReturnToFirstPointSetting.RETURN_TO_START_AND_RELEASE_DRIVER = 3
 function ReturnToFirstPointSetting:init(vehicle)
-	BooleanSetting.init(self, 'returnToFirstPoint', 'COURSEPLAY_RETURN_TO_FIRST_POINT',
-		'COURSEPLAY_RETURN_TO_FIRST_POINT', vehicle)
+	SettingList.init(self, 'returnToFirstPoint', 'COURSEPLAY_RETURN_TO_FIRST_POINT',
+		'COURSEPLAY_RETURN_TO_FIRST_POINT', vehicle,
+		{
+			self.DEACTIVED,
+			self.RETURN_TO_START,
+			self.RELEASE_DRIVER,
+			self.RETURN_TO_START_AND_RELEASE_DRIVER	
+			},
+		{
+			"COURSEPLAY_DEACTIVATED",
+			"COURSEPLAY_ACTIVATED",
+			"COURSEPLAY_RETURN_TO_FIRST_POINT_RELEASE_DRIVER",
+			"COURSEPLAY_RETURN_TO_FIRST_POINT_RETURN_TO_START_AND_RELEASE_DRIVER"
+		})
+end
+
+function ReturnToFirstPointSetting:isReturnToStartActive()
+	return self:get() == self.RETURN_TO_START or self:get() == self.RETURN_TO_START_AND_RELEASE_DRIVER
+end
+
+function ReturnToFirstPointSetting:isReleaseDriverActive()
+	return self:get() == self.RELEASE_DRIVER or self:get() == self.RETURN_TO_START_AND_RELEASE_DRIVER
 end
 
 --- Load courses at startup?
@@ -2492,6 +2582,14 @@ end
 
 function RidgeMarkersAutomatic:isDisabled()
 	return self.vehicle.cp.driver and not AIDriverUtil.hasAIImplementWithSpecialization(self.vehicle, RidgeMarker)
+end
+
+---@class KeepCurrentSteering : BooleanSetting
+KeepCurrentSteering = CpObject(BooleanSetting)
+function KeepCurrentSteering:init(vehicle)
+	BooleanSetting.init(self, 'keepCurrentSteering', 'COURSEPLAY_KEEP_CURRENT_STEERING',
+			'COURSEPLAY_KEEP_CURRENT_STEERING_TOOLTIP ', vehicle)
+	self:set(false)
 end
 
 ---@class EnableVisualWaypointsTemporary : BooleanSetting
@@ -2721,7 +2819,7 @@ function ShowMapHotspotSetting:createMapHotspot()
 	local _, textSize = getNormalizedScreenValues(0, 6);
 	local _, textOffsetY = getNormalizedScreenValues(0, 9.5);
 	local width, height = getNormalizedScreenValues(11,11);
-]]
+]]	local helperName = self.vehicle.currentHelper and self.vehicle.currentHelper.name or ".."
 	local hotspotX, _, hotspotZ = getWorldTranslation(self.vehicle.rootNode)
 	local _, textSize = getNormalizedScreenValues(0, 9)
 	local _, textOffsetY = getNormalizedScreenValues(0, 18)
@@ -2729,7 +2827,7 @@ function ShowMapHotspotSetting:createMapHotspot()
 	self.mapHotspot = MapHotspot:new("cpHelper", MapHotspot.CATEGORY_AI)
 	self.mapHotspot:setSize(width, height)
 	self.mapHotspot:setLinkedNode(self.vehicle.components[1].node)											-- objectId to what the hotspot is attached to
-	self.mapHotspot:setText(string.format('CP(%s)\n%s', tostring(self.vehicle.currentHelper.name),self:getMapHotspotText(self.vehicle)))
+	self.mapHotspot:setText(string.format('CP(%s)\n%s', tostring(helperName),self:getMapHotspotText(self.vehicle)))
 	self.mapHotspot:setImage(nil, getNormalizedUVs(MapHotspot.UV.HELPER), {0.052, 0.1248, 0.672, 1})
 	self.mapHotspot:setBackgroundImage(nil, getNormalizedUVs(MapHotspot.UV.HELPER))
 	self.mapHotspot:setIconScale(0.7)
@@ -2767,15 +2865,21 @@ end
 
 function ShowMapHotspotSetting:onWriteStream(stream)
 	SettingList.onWriteStream(self,stream)
-	streamWriteBool(stream,self.mapHotspot or false)
-	
+	if self.mapHotspot~=nil then 
+		streamWriteBool(stream,true)
+		streamWriteUInt8(streamId, self.vehicle.currentHelper.index)
+	else 
+		streamWriteBool(stream,false)
+	end
 end
 
 function ShowMapHotspotSetting:onReadStream(stream)
 	SettingList.onReadStream(self,stream)
 	if streamReadBool(stream) then
+		local helperIndex = streamReadUInt8(streamId)
+		self.vehicle.currentHelper = g_helperManager:getHelperByIndex(helperIndex)
 		--add to activeCoursePlayers
-		CpManager:addToActiveCoursePlayers(self)	
+		CpManager:addToActiveCoursePlayers(self.vehicle)	
 		-- add ingameMap icon
 		self:createMapHotspot();
 	end
@@ -2922,6 +3026,7 @@ function SiloSelectedFillTypeSetting:checkSelectedFillTypes(supportedFillTypes,c
 			supportedFillTypes[data.fillType]=0
 		elseif cleanUp then	--delete not supported fillTypes 
 			self:deleteByIndex(index) 
+			return self:checkSelectedFillTypes(supportedFillTypes,cleanUp)
 		end
 	end
 end 
@@ -3795,6 +3900,20 @@ function SettingsContainer:validateSetting(setting)
 	return true
 end
 
+function SettingsContainer.createGlobalCourseGeneratorSettings()
+	local container = SettingsContainer('globalCourseGeneratorSettings')
+	container:addSetting(HeadlandLaneChangeMinRadius)
+	container:addSetting(HeadlandLaneChangeMinDistanceToCorner)
+	container:addSetting(HeadlandLaneChangeMinDistanceFromCorner)
+	return container
+end
+
+function SettingsContainer.createGlobalPathfinderSettings()
+	local container = SettingsContainer('globalPathfinderSettings')
+	container:addSetting(MaxDeltaAngleAtGoal)
+	container:addSetting(DeltaAngleRelaxFactor)
+	return container
+end
 
 -- do not remove this comment
 -- vim: set noexpandtab:
