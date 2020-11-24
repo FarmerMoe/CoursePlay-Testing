@@ -1,38 +1,56 @@
 --[[
 This file is part of Courseplay (https://github.com/Courseplay/courseplay)
 Copyright (C) 2020 Thomas Gärtner, Peter Vaiko
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
+
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
+
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ]]--
 
 --[[
+
 How do we make sure the unloader does not collide with the combine?
+
 1. ProximitySensor
+
 The ProximitySensor is a generic AIDriver feature.
+
 The combine has a proximity sensor on the back and will slow down and stop
 if something is in range.
+
 The unloader has a proximity sensor on the front to prevent running into the combine
 and to swerve other vehicles in case of a head on collision for example.
+
 In some states, for instance when unloading choppers, the tractor disables the generic
 speed control as it has to drive very close to the chopper.
+
 There is an additional proximity sensor dedicated to following the chopper. This has
 all controlling features disabled.
+
 2. Turns
+
 The combine stops when discharging during a turn, so at the end of a row or headland turn
 it won't start the turn until it is empty.
+
 3. Combine Ready For Unload
+
 The unloader can also ask the combine if it is ready to unload (isReadyToUnload()), as we
 expect the combine to know best when it is going to perform some maneuvers.
+
 4. Cooperative Collision Avoidance Using the TrafficController
+
 This is currently screwed up...
+
+
 ]]--
 
 -- TODO: swerve to the correct direction at low angles
