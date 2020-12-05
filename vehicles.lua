@@ -39,36 +39,6 @@ function courseplay:createNewLinkedNode(object, nodeName, linkToNode)
 end;
 
 
-
-function courseplay:disableCropDestruction(vehicle)
-	-- Make sure we have the cp table
-	if vehicle.cp == nil then vehicle.cp = {}; end;
-
-	-- Disable crop destruction if enabled
-	if vehicle.cropDestruction then
-		vehicle.cp.cropDestructionIsActiveBackup = vehicle.cropDestruction.isActive;
-		vehicle.cropDestruction.isActive = false;
-	end;
-
-	-- CHECK ATTACHED IMPLEMENTS
-	for _,impl in pairs(vehicle:getAttachedImplements()) do
-		courseplay:disableCropDestruction(impl.object);
-	end;
-end;
-
-function courseplay:enableCropDestruction(vehicle)
-	-- Enable crop destruction if backup is set
-	if vehicle.cropDestruction and vehicle.cp and vehicle.cp.cropDestructionIsActiveBackup ~= nil then
-		vehicle.cropDestruction.isActive = vehicle.cp.cropDestructionIsActiveBackup;
-		vehicle.cp.cropDestructionIsActiveBackup = nil;
-	end;
-
-	-- CHECK ATTACHED IMPLEMENTS
-	for _,impl in pairs(vehicle:getAttachedImplements()) do
-		courseplay:enableCropDestruction(impl.object);
-	end;
-end;
-
 --- courseplay:findJointNodeConnectingToNode(workTool, fromNode, toNode, doReverse)
 --	Returns: (node, backtrack, rotLimits)
 --		node will return either:		1. The jointNode that connects to the toNode,
@@ -1366,15 +1336,6 @@ end;
 
 -- vim: set noexpandtab:
 
-function courseplay:getFreeCapacity(vehicle,fillType)
-    local freeCapacity = 0;
-    for i,fillUnit in pairs(vehicle:getFillUnits()) do
-        --if fillType == nil or fillType == FillType.UNKNOWN or fillUnit.fillTypes[fillType] then
-            freeCapacity = freeCapacity + vehicle:getFillUnitFreeCapacity(i)
-       -- end
-    end
-    return freeCapacity;
-end
 
 function courseplay:getTipTriggerRaycastDirection(vehicle,lx,lz,distance)
 	--get raycast direction x and z
@@ -1679,6 +1640,15 @@ function AIDriverUtil.hasImplementsOnTheBack(vehicle)
 	return false
 end
 
+function AIDriverUtil.getAllAttachedImplements(object, implements)
+	if not implements then implements = {} end
+	for _, implement in ipairs(object:getAttachedImplements()) do
+		table.insert(implements, implement)
+		AIDriverUtil.getAllAttachedImplements(implement.object, implements)
+	end
+	return implements
+end
+
 ---@return table, number frontmost object and the distance between the front of that object and the root node of the object
 function AIDriverUtil.getFirstAttachedImplement(vehicle)
 	-- by default, it is the vehicle's front, negative as the vehicle's root node is behind the front implement's root node
@@ -1686,7 +1656,7 @@ function AIDriverUtil.getFirstAttachedImplement(vehicle)
 	-- lengthOffset > 0 if the root node is towards the back of the vehicle, < 0 if it is towards the front
 	local frontOffset = vehicle.sizeLength / 2 + vehicle.lengthOffset
 	local firstImplement = vehicle
-	for _, implement in pairs(vehicle:getAttachedImplements()) do
+	for _, implement in pairs(AIDriverUtil.getAllAttachedImplements(vehicle)) do
 		if implement.object ~= nil then
 			local _, _, d = localToLocal(vehicle.rootNode, implement.object.rootNode, 0, 0, implement.object.sizeLength / 2 + implement.object.lengthOffset)
 			courseplay.debugVehicle(6, vehicle, '%s front distance %d', implement.object:getName(), d)
@@ -1695,7 +1665,6 @@ function AIDriverUtil.getFirstAttachedImplement(vehicle)
 				frontOffset = implement.object.sizeLength / 2 + implement.object.lengthOffset
 				firstImplement = implement.object
 			end
-			-- TODO: recursively search implements attached to other implements
 		end
 	end
 	return firstImplement, frontOffset
@@ -1708,7 +1677,7 @@ function AIDriverUtil.getLastAttachedImplement(vehicle)
 	-- lengthOffset > 0 if the root node is towards the back of the vehicle, < 0 if it is towards the front
 	local backOffset = vehicle.sizeLength / 2 - vehicle.lengthOffset
 	local lastImplement = vehicle
-	for _, implement in pairs(vehicle:getAttachedImplements()) do
+	for _, implement in pairs(AIDriverUtil.getAllAttachedImplements(vehicle)) do
 		if implement.object ~= nil then
 			local _, _, d = localToLocal(vehicle.rootNode, implement.object.rootNode, 0, 0, - implement.object.sizeLength / 2 + implement.object.lengthOffset)
 			courseplay.debugVehicle(6, vehicle, '%s back distance %d', implement.object:getName(), d)
@@ -1717,7 +1686,6 @@ function AIDriverUtil.getLastAttachedImplement(vehicle)
 				backOffset = implement.object.sizeLength / 2 - implement.object.lengthOffset
 				lastImplement = implement.object
 			end
-			-- TODO: recursively search implements attached to other implements
 		end
 	end
 	return lastImplement, -backOffset
