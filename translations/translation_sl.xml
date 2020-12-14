@@ -36,6 +36,7 @@
 		<text name="COURSEPLAY_CLEAR_COURSE" 								text="Počisti trenutno pot" />
 		<text name="COURSEPLAY_DRIVE_NOW" 									text="Vozi zdaj" />
 		<text name="COURSEPLAY_DRIVE_ON_AT" 								text="Vozi ob:" />
+		<text name="COURSEPLAY_MOVE_ON_AT" 									text="Drive on at less then:" />
 		<text name="UNKNOWN" 												text="neznano" />
 		<text name="COURSEPLAY_HEADLAND_DIRECTION"							text="Headland counter-/clockwise" /> <!-- TODO: TRANSLATE -->
 		<text name="COURSEPLAY_HEADLAND_BEFORE_AFTER"						text="Headland before/after field course" /> <!-- TODO: TRANSLATE -->
@@ -335,6 +336,7 @@
 		<text name="COURSEPLAY_DRIVECONTROL_MODE_3" 						text="4WD Always &amp; Rear Diff on for Fieldwork" /> <!-- TODO: TRANSLATION! -->
 		<text name="COURSEPLAY_DRIVECONTROL_MODE_4" 						text="4WD Always &amp; Both Diffs on for Fieldwork" /> <!-- TODO: TRANSLATION! -->
 		<text name="COURSEPLAY_YES_NO_FIELDSCAN" 							text="Ali želite da se polja skenirajo avtomatsko?" />
+		<text name="COURSEPLAY_SUPPORT_INFO" 								text="Have you found a bug or need help with courseplay, then please have a look at: https://github.com/Courseplay/courseplay" />
 		<text name="COURSEPLAY_YES_NO_WAGES" 								text="Ali želite da vaši delavi zaslužijo denar?" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR" 						text="Kalkulator porabe semen" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR_FIELD" 					text="Polje: %d (%s %s)" />

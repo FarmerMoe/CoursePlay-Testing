@@ -35,8 +35,8 @@
 		<text name="COURSEPLAY_CONTINUE" 									text="Continua" />
 		<text name="COURSEPLAY_CLEAR_COURSE" 								text="Cancella percorso" />
 		<text name="COURSEPLAY_DRIVE_NOW" 									text="Avvia ora" />
-		<text name="COURSEPLAY_DRIVE_ON_AT" 								text="Avvia scarico rimorchio al" />
-		<text name="COURSEPLAY_MOVE_ON_AT" 									text="Drive on at less then:" />
+		<text name="COURSEPLAY_DRIVE_ON_AT" 								text="Avvia scarico rimorchio al:" />
+		<text name="COURSEPLAY_MOVE_ON_AT" 									text="Prosegui fino a:" />
 		<text name="UNKNOWN" 												text="sconosciuto" />
 		<text name="COURSEPLAY_HEADLAND_DIRECTION" 							text="Testata senso di marcia" />
 		<text name="COURSEPLAY_HEADLAND_BEFORE_AFTER" 						text="Testata prima/dopo lavoro nel campo" />
@@ -235,7 +235,7 @@
 		<text name="COURSEPLAY_CENTER_MODE_UP_DOWN" 						text="su/giù" />
 		<text name="COURSEPLAY_CENTER_MODE_CIRCULAR" 						text="circolare" />
 		<text name="COURSEPLAY_CENTER_MODE_SPIRAL" 							text="spirale" />
-		<text name="COURSEPLAY_CENTER_MODE_LANDS"						    text="Lands" />
+		<text name="COURSEPLAY_CENTER_MODE_LANDS"						    text="Terreno" />
 		<text name="COURSEPLAY_NUMBER_OF_ROWS_PER_LAND"					    text="Numero di file per terra" />
 		<text name="COURSEPLAY_NUMBER_OF_ROWS_PER_LAND_TOOLTIP"			    text="Quando si lavora in terre, quante file sono per terra" />
 		<text name="COURSEPLAY_ACTIVATED" 									text="attivato" />
@@ -336,6 +336,7 @@
 		<text name="COURSEPLAY_DRIVECONTROL_MODE_3" 						text="4WD Sempre + diff. post. attivo in campo" />
 		<text name="COURSEPLAY_DRIVECONTROL_MODE_4" 						text="4WD Sempre + diff. attivi in campo" />
 		<text name="COURSEPLAY_YES_NO_FIELDSCAN" 							text="Vuoi analizzare i campi automaticamente?" />
+		<text name="COURSEPLAY_SUPPORT_INFO" 								text="Have you found a bug or need help with courseplay, then please have a look at: https://github.com/Courseplay/courseplay" />
 		<text name="COURSEPLAY_YES_NO_WAGES" 								text="Vuoi che i tuoi lavoratori guadagnino i salari (%s / ora)?" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR" 						text="Utilizzo dei semi" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR_FIELD" 					text="Campo: %d (%s %s)" />
