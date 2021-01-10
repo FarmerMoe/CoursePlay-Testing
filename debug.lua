@@ -27,6 +27,18 @@ function CpManager:setUpDebugChannels()
 			defaultActive[4] = true;
 			defaultActive[3] = true;
 		end;
+	-- EBP ADDED NOT FOR UPLOAD (only else stmt)
+	else
+			defaultActive[11] = true;
+			defaultActive[12] = true;
+			defaultActive[13] = true;
+			defaultActive[14] = true;
+			defaultActive[6] = true;
+			defaultActive[7] = true;
+			defaultActive[8] = true;
+			defaultActive[9] = true;
+			defaultActive[4] = true;
+			defaultActive[3] = true;
 	end;
 
 	-- DEBUG CHANNELS
@@ -95,6 +107,11 @@ end;
 
 -- GENERAL DEBUG
 function courseplay:debug(str, channel)
+	-- EBP added
+	if channel == nil then
+		channel = 6
+	end
+
 	if courseplay.debugChannels and channel ~= nil and courseplay.debugChannels[channel] ~= nil and courseplay.debugChannels[channel] == true then
 		local timestamp = getDate( ":%S")
 		print(timestamp .. ' [dbg' .. tostring(channel) .. ' lp' .. g_updateLoopIndex .. '] ' .. str);
