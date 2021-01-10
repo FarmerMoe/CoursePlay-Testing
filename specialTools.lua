@@ -47,6 +47,7 @@ function courseplay:setNameVariable(workTool)
 		elseif spec == Overloading 		   then workTool.cp.hasSpecializationOverloader			 = true;
 		elseif spec == Trailer	 		   then workTool.cp.hasSpecializationTrailer			 = true;
 		elseif spec == BunkerSiloCompacter then workTool.cp.hasSpecializationBunkerSiloCompacter = true;		
+		elseif spec == soilSampler		then workTool.cp.hasSpecializationSoilSampler = true;
 		end;
 	end;
 
