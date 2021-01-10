@@ -64,6 +64,9 @@ function UnloadableFieldworkAIDriver.create(vehicle)
 		return PlowAIDriver(vehicle)
     elseif FS19_addon_strawHarvest and AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_addon_strawHarvest.StrawHarvestPelletizer) then
         return CombineAIDriver(vehicle)
+	--elseif SpecializationUtil.hasSpecialization(soilSampler, self.specializations) then
+	--	self:debug('EBP - ln 68 - SS specialization recognized and returns true -- UnloadableFieldworkAIDriver')
+	--  return UnloadableFieldworkAIDriver(vehicle) --SoilSamplerAIDriver(vehicle)
 	else
 		return UnloadableFieldworkAIDriver(vehicle)
 	end

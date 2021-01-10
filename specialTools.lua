@@ -69,6 +69,10 @@ function courseplay:setNameVariable(workTool)
 	--]]
 
 
+	--Isaria Scout does not have a specialization set. Instead specialization is on vehicle  [Precision Farming DLC]
+	if workTool.cp.xmlFileName == 'isariaScout.xml' then
+			workTool.cp.hasSpecializationSoilSampler = true;
+	end;
 
 	--------------------------------------------------------------
 	-- ###########################################################
@@ -122,6 +126,37 @@ function courseplay:setNameVariable(workTool)
 	elseif workTool.animationParts ~= nil and workTool.animationParts[2] ~= nil and workTool.toggleUnloadingState ~= nil and workTool.setUnloadingState ~= nil then
 		workTool.cp.isAugerWagon = true;
 		workTool.cp.isTaarupShuttle = true;
+	end;
+
+	-- [2] SOIL SAMPLERS
+	if workTool.spec_soilSampler or workTool.cp.hasSpecializationSoilSampler then
+
+		--[[ EBP put any soil sampler special variables here ..
+		Remove as part of cleanup
+		self:debug('EBP: ' .. workTool.typeName .. ' has Soil Specialization')
+		if workTool.cp.specialWorkWidth ~= nil then
+			t1 = workTool.cp.specialWorkWidth
+		else
+			t1 = "null"
+		end;
+		if workTool.samplerDistance ~= nil then
+			t2 = workTool.samplerDistance
+		else
+			t2 = workTool.spec_soilSampler.samplingRadius
+		end;
+		if workTool.cp.workWidth ~= nil then
+			t3 = workTool.cp.workWidth
+		else
+			t3 = "null"
+		end;
+		self:debug('EBP: spworkWidth: '.. tostring(t1) .. ' ; sampleD: ' .. tostring(t2) .. '; WW: ' .. tostring(t3))
+		--]]
+
+		if workTool.spec_soilSampler.samplingRadius ~= nil then
+			-- Reduce oval size by truncating decimal thereby only using integer number.
+			workTool.cp.specialWorkWidth = math.floor(workTool.spec_soilSampler.samplingRadius -0.5);
+		end;
+
 	end;
 
 	-- ###########################################################

@@ -103,6 +103,7 @@ local function initialize()
 		'TriggerShovelModeAIDriver',
 		'Conflict',
 		'AITurn',
+		'SoilSamplerAIDriver',
 		'course-generator/geo',
 		'course-generator/Island',
 		'course-generator/courseGenerator',

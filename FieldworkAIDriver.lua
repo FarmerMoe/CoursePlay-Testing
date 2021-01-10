@@ -77,6 +77,7 @@ end
 
 function FieldworkAIDriver.register()
 	-- TODO: maybe just build a table with all specs we want to handle
+courseplay:debug('EBP -  FieldworkAIDriver register')
 	local strawHarvestBaleCollectSpec
 
 	AIImplement.getCanImplementBeUsedForAI = Utils.overwrittenFunction(AIImplement.getCanImplementBeUsedForAI,
@@ -93,10 +94,15 @@ function FieldworkAIDriver.register()
 				return true
 			elseif strawHarvestBaleCollectSpec and SpecializationUtil.hasSpecialization(strawHarvestBaleCollectSpec, self.specializations) then
 				return true
+			--elseif SpecializationUtil.hasSpecialization(soilSampler, self.specializations) then
+			--	self:debug('EBP - ln 97 - SS specialization recognized and returns true -- this does not seem to be hit')
+			--	return true
 			elseif superFunc ~= nil then
 				return superFunc(self)
 			end
 		end)
+
+--courseplay:debug('EBP - past AI overwrite in FieldworkAIDriver')
 
 	-- Make sure the Giants helper can't be hired for implements which have no Giants AI functionality
 	AIVehicle.getCanStartAIVehicle = Utils.overwrittenFunction(AIVehicle.getCanStartAIVehicle,

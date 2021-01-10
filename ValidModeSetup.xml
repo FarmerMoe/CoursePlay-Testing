@@ -165,6 +165,10 @@
 			<Setup>
 				<Specialization name="spec_strawHarvestPelletizer"/>
 			</Setup>
+			<!--soil samplers..-->
+			<Setup>
+				<Specialization name="spec_soilSampler"/>
+			</Setup>
 		</AllowedSetups>
 		<DisallowedSetups>
 
