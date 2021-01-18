@@ -336,6 +336,8 @@ setVersionData();
 initialize();
 
 CpManager.isDeveloper = sonOfaBangSonOfaBoom[getMD5(g_gameSettings:getValue("nickname"))];
+-- EBP Changed for testing
+CpManager.isDeveloper = true
 
 if CpManager.isDeveloper then
 	print('Special dev magic for Courseplay developer unlocked. You go, girl!');

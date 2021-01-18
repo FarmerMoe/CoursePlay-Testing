@@ -27,8 +27,7 @@ function CpManager:setUpDebugChannels()
 			defaultActive[4] = true;
 			defaultActive[3] = true;
 		end;
-	-- EBP ADDED NOT FOR UPLOAD (only else stmt)
-	else
+		-- EBP ADDED NOT FOR UPLOAD
 			defaultActive[11] = true;
 			defaultActive[12] = true;
 			defaultActive[13] = true;
@@ -108,7 +107,7 @@ end;
 -- GENERAL DEBUG
 function courseplay:debug(str, channel)
 	-- EBP added
-	if channel == nil then
+	if channel == nil and CpManager.isDeveloper then
 		channel = 6
 	end
 
