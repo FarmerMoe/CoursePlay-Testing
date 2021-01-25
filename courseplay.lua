@@ -8,7 +8,7 @@
 -- @history: http://courseplay.github.io/courseplay/en/changelog/index.html
 --
 -- Copyright (C) 2014 Courseplay Dev Team
---
+-- 
 
 -- add steady courseplay identifier to global environment
 local globalEnvironment = getfenv (0);
@@ -59,23 +59,23 @@ local function initialize()
     	'courseeditor',
     	'CourseEditorEvent',
     	'clicktoswitch',
-		'debug',
-		'distance',
+		'debug', 
+		'distance', 
 		'fields',
-		'fruit',
+		'fruit', 
 		'helpers',
-		'hud',
-		'input',
+		'hud', 
+		'input', 
 		'recording',
 		'reverse',
 		'settings',
 		'GlobalSettings',
 		'ValidModeSetupHandler',
-		'signs',
-		'specialTools',
-		'start_stop',
+		'signs', 
+		'specialTools', 
+		'start_stop', 
 		'toolManager',
-		'triggers',
+		'triggers', 
 		'turn',
 		'TrafficCollision',
 		'ProximitySensor',
@@ -104,7 +104,6 @@ local function initialize()
 		'Conflict',
 		'AITurn',
 		'VehicleConfigurations',
-		'SoilSamplerAIDriver',
 		'course-generator/geo',
 		'course-generator/Island',
 		'course-generator/courseGenerator',
@@ -210,7 +209,7 @@ local function setGlobalData()
 	courseplay.lights.HEADLIGHT_OFF = 0;
 	courseplay.lights.HEADLIGHT_STREET = 1;
 	courseplay.lights.HEADLIGHT_FULL = 7;
-
+	
 	-- 2D/debug lines display options
 	courseplay.COURSE_2D_DISPLAY_OFF	 = 0;
 	courseplay.COURSE_2D_DISPLAY_2DONLY	 = 1;
@@ -311,7 +310,7 @@ local function setGlobalData()
 	[41]={name='self.cp.generationPosition.x',dataFormat='Float'},
 	[42]={name='self.cp.generationPosition.z',dataFormat='Float'}
 	}
-
+	
 	courseplay.globalSettings = SettingsContainer.createGlobalSettings()
 	courseplay.globalCourseGeneratorSettings = SettingsContainer.createGlobalCourseGeneratorSettings()
 	courseplay.globalPathfinderSettings = SettingsContainer.createGlobalPathfinderSettings()
@@ -325,8 +324,6 @@ setVersionData();
 initialize();
 
 CpManager.isDeveloper = sonOfaBangSonOfaBoom[getMD5(g_gameSettings:getValue("nickname"))];
--- EBP Changed for testing
-CpManager.isDeveloper = true
 
 if CpManager.isDeveloper then
 	print('Special dev magic for Courseplay developer unlocked. You go, girl!');
