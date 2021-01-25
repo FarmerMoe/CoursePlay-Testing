@@ -976,6 +976,7 @@ function courseplay:getTotalLengthOnWheels(vehicle)
 			-- Check if it's rear attached
 			if courseplay:isRearAttached(vehicle, implement.jointDescIndex) then
 				hasRearAttach = true;
+				courseplay:debug('EBP: has rear attachement')
 				local length, _ = courseplay:getTotalLengthOnWheels(implement.object);
 				if length > 0 then
 					jointType = implement.object:getActiveInputAttacherJoint().jointType;
@@ -1708,6 +1709,23 @@ end
 
 function AIDriverUtil.getImplementWithSpecializationFromList(specialization, implements)
 	for _, implement in ipairs(implements) do
+--[[
+	for z,spec1 in pairs(implement.object.specializations) do
+		courseplay:debug('EBP - T5 obj ' .. tostring(spec1))
+	end
+
+		--courseplay:debug('EBP - T4 specialization ' .. specialization)
+		--courseplay:debug('EBP - T4 obj ' .. implement.object.specializations)
+
+		--for i,spec in pairs(specialization) do
+		--	courseplay:debug('Specialization:' .. (spec))
+		--end;
+
+		--for z,spec1 in pairs(implement.object.specializations) do
+		--	courseplay:debug('Obj Specialization:' .. tostring(spec1))
+		--end;
+--]]
+
 		if SpecializationUtil.hasSpecialization(specialization, implement.object.specializations) then
 			return implement.object
 		end

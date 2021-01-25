@@ -48,6 +48,24 @@ function UnloadableFieldworkAIDriver:setHudContent()
 end
 
 function UnloadableFieldworkAIDriver.create(vehicle)
+--[[
+	local vehicleName = vehicle and nameNum(vehicle) or "Unknown vehicle"
+	courseplay:debug('EBP - T1 ' .. vehicleName)
+	if vehicleName == 'XUV865M' or vehicleName == '724 Vario' then
+			local Test1 = AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_precisionFarming.soilSampler)
+
+			if Test1 then
+				courseplay:debug('EBP - Test1 is true ')
+			else
+				courseplay:debug('EBP - Test1 is false ')
+			end
+
+			for i,spec in pairs(vehicle.specializationNames) do
+				courseplay:debug('Specialization: ' .. tostring(i) .. '  Name: '.. tostring(spec))
+			end
+	end
+--]]
+
 	if AIDriverUtil.hasAIImplementWithSpecialization(vehicle, BaleLoader) then
 		return BaleLoaderAIDriver(vehicle)
 	elseif AIDriverUtil.hasAIImplementWithSpecialization(vehicle, BaleWrapper) then
@@ -62,13 +80,33 @@ function UnloadableFieldworkAIDriver.create(vehicle)
 	elseif SpecializationUtil.hasSpecialization(Plow, vehicle.specializations) or
 		AIDriverUtil.hasAIImplementWithSpecialization(vehicle, Plow) then
 		return PlowAIDriver(vehicle)
-    elseif FS19_addon_strawHarvest and AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_addon_strawHarvest.StrawHarvestPelletizer) then
-        return CombineAIDriver(vehicle)
-	--elseif SpecializationUtil.hasSpecialization(soilSampler, self.specializations) then
-	--	self:debug('EBP - ln 68 - SS specialization recognized and returns true -- UnloadableFieldworkAIDriver')
-	--  return UnloadableFieldworkAIDriver(vehicle) --SoilSamplerAIDriver(vehicle)
+  elseif FS19_addon_strawHarvest and AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_addon_strawHarvest.StrawHarvestPelletizer) then
+		return CombineAIDriver(vehicle)
+
+	elseif FS19_precisionFarming and UnloadableFieldworkAIDriver.SoilProbeImplement(vehicle) then
+		-- AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_precisionFarming.SoilSampler) then
+		courseplay:debug('EBP: Precision Farming and soilSampler specialization is true')
+		return SoilSamplerAIDriver(vehicle);
+
 	else
-		return UnloadableFieldworkAIDriver(vehicle)
+			return UnloadableFieldworkAIDriver(vehicle)
+	end
+end;
+
+-- EBP Added as temp workaround
+function UnloadableFieldworkAIDriver.SoilProbeImplement(vehicle)
+	-- If SoilSampler specialization then true. Added because the code
+	-- AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_precisionFarming.SoilSampler)
+	-- does not seem to return true when expected for the SCOUT
+
+	local vehicleName = vehicle and nameNum(vehicle) or "Unknown vehicle"
+	-- vehicleName == 'XUV865M'
+	if vehicleName == 'XUV865M' then
+		courseplay:debug('EBP - workaround test returned true')
+		return true
+	else
+		courseplay:debug('EBP - workaround test returned false')
+		return false
 	end
 end
 

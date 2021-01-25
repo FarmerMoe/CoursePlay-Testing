@@ -248,6 +248,7 @@ function courseplay:updateWorkTools(vehicle, workTool, isImplement)
 
 	if not isImplement or hasWorkTool or workTool.cp.isNonTippersHandledWorkTool then
 		-- SPECIAL SETTINGS ?? is this one needed any more ? 
+		courseplay:debug('EBP: Worktool getspecialsettings before folding: ' .. tostring(workTool:getName()))
 		courseplay:askForSpecialSettings(vehicle, workTool);
 
 		--FOLDING PARTS: isFolded/isUnfolded states
@@ -519,6 +520,7 @@ function courseplay:setMarkers(vehicle, object)
 end;
 
 function courseplay:setFoldedStates(object)
+	courseplay:debug('EBP: Checking foldable states')
 	if courseplay:isFoldable(object) and object.spec_foldable.turnOnFoldDirection then
 		cpPrintLine(17);
 		courseplay:debug(nameNum(object) .. ': setFoldedStates()', 17);
