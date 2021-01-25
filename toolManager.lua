@@ -201,6 +201,7 @@ function courseplay:updateWorkTools(vehicle, workTool, isImplement)
 
 	if not isImplement or hasWorkTool or workTool.cp.isNonTippersHandledWorkTool then
 		--FOLDING PARTS: isFolded/isUnfolded states
+		courseplay:debug('EBP: Worktool getspecialsettings before folding: ' .. tostring(workTool:getName()))
 		courseplay:setFoldedStates(workTool);
 	end;
 
@@ -313,6 +314,7 @@ end;
 
 
 function courseplay:setFoldedStates(object)
+	courseplay:debug('EBP: Checking foldable states')
 	if courseplay:isFoldable(object) and object.spec_foldable.turnOnFoldDirection then
 		cpPrintLine(17);
 		courseplay:debug(nameNum(object) .. ': setFoldedStates()', 17);
@@ -471,10 +473,10 @@ end
 --this one enable the buttons and allowes the user to change the mode
 function courseplay:getIsToolCombiValidForCpMode(vehicle,cpModeToCheck)
 	--5 is always valid
-	if cpModeToCheck == 5 then 
+	if cpModeToCheck == 5 then
 		return true;
 	end
-	if cpModeToCheck == 7 then 
+	if cpModeToCheck == 7 then
 		return false;
 	end
 	local callback = {}
