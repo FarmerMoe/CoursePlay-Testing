@@ -46,8 +46,13 @@ function courseplay:setNameVariable(workTool)
 		elseif spec == Leveler 		   	   then workTool.cp.hasSpecializationLeveler 			 = true;
 		elseif spec == Overloading 		   then workTool.cp.hasSpecializationOverloader			 = true;
 		elseif spec == Trailer	 		   then workTool.cp.hasSpecializationTrailer			 = true;
-		elseif spec == BunkerSiloCompacter then workTool.cp.hasSpecializationBunkerSiloCompacter = true;		
-		elseif spec == soilSampler		then workTool.cp.hasSpecializationSoilSampler = true;
+		elseif spec == BunkerSiloCompacter then workTool.cp.hasSpecializationBunkerSiloCompacter = true;
+		elseif spec == soilSampler		then
+			courseplay:debug('EBP: soilSampler spec is found' );
+			workTool.cp.hasSpecializationSoilSampler = true;
+		elseif spec == FS19_precisionFarming.soilSampler		then
+			courseplay:debug('EBP: FS19_precisionFarming spec is found' );
+			workTool.cp.hasSpecializationSoilSampler = true;
 		end;
 	end;
 
@@ -70,10 +75,22 @@ function courseplay:setNameVariable(workTool)
 	--]]
 
 
-	--Isaria Scout does not have a specialization set. Instead specialization is on vehicle  [Precision Farming DLC]
+	--Isaria Scout  [Precision Farming DLC]
 	if workTool.cp.xmlFileName == 'isariaScout.xml' then
-			workTool.cp.hasSpecializationSoilSampler = true;
+		courseplay:debug('EBP: Isaria specs')
+		workTool.cp.lengthOffset = 2.5
+		workTool.cp.turnOnFoldDirection = 1
 	end;
+
+	--[[		for i,spec in pairs(workTool.specializationNames) do
+			courseplay:debug('EBP: ' .. i .. 'Specialization Name:' .. tostring(spec))
+		end;
+		for i,spec in pairs(workTool.specializations) do
+			courseplay:debug('EBP: ' .. i .. 'Specialization:' .. tostring(spec))
+		end;
+		--workTool.cp.hasSpecializationSoilSampler = true;
+
+	--]]
 
 	--------------------------------------------------------------
 	-- ###########################################################
@@ -132,27 +149,10 @@ function courseplay:setNameVariable(workTool)
 	-- [2] SOIL SAMPLERS
 	if workTool.spec_soilSampler or workTool.cp.hasSpecializationSoilSampler then
 
-		--[[ EBP put any soil sampler special variables here ..
-		Remove as part of cleanup
-		self:debug('EBP: ' .. workTool.typeName .. ' has Soil Specialization')
-		if workTool.cp.specialWorkWidth ~= nil then
-			t1 = workTool.cp.specialWorkWidth
-		else
-			t1 = "null"
-		end;
-		if workTool.samplerDistance ~= nil then
-			t2 = workTool.samplerDistance
-		else
-			t2 = workTool.spec_soilSampler.samplingRadius
-		end;
-		if workTool.cp.workWidth ~= nil then
-			t3 = workTool.cp.workWidth
-		else
-			t3 = "null"
-		end;
-		self:debug('EBP: spworkWidth: '.. tostring(t1) .. ' ; sampleD: ' .. tostring(t2) .. '; WW: ' .. tostring(t3))
-		--]]
 
+		courseplay:debug('EBP: workTool.spec_soilSampler ' .. workTool.typeName .. ' has Soil Specialization')
+
+		-- EBP put any soil sampler special variables here ..
 		if workTool.spec_soilSampler.samplingRadius ~= nil then
 			-- Reduce oval size by truncating decimal thereby only using integer number.
 			workTool.cp.specialWorkWidth = math.floor(workTool.spec_soilSampler.samplingRadius -0.5);
@@ -168,7 +168,7 @@ function courseplay:setNameVariable(workTool)
 	--
 	-- workTool.cp.steeringAngleCorrection:			(Angle in degrees)		Overwrite the default steering angle if set. NOTE: steeringAngleMultiplier will have no effect if this is set.
 	-- workTool.cp.steeringAngleMultiplier:			(Number)				Used if vehicle needs to turn faster or slower.
-	--																		2 	= turns 2 times slower.																	
+	--																		2 	= turns 2 times slower.
 	--																		0.5 = turns 2 times faster.
 	-- workTool.cp.componentNumAsDirectionNode:		(Component Index)		Used to set another component as the Direction Node. Starts from index 1 as the first component.
 	-- workTool.cp.useCrabSteeringMode:				(Crab Steering Index)	Used to overwrite the default crab steering mode when cp is driving
@@ -204,7 +204,7 @@ function courseplay:setNameVariable(workTool)
 		-- ###########################################################
 
 	-- [3] MOD TRAILERS
-	
+
 
 	-- ###########################################################
 
@@ -228,10 +228,10 @@ function courseplay:setNameVariable(workTool)
 				end
 			end
 		end
-	
+
 	elseif workTool.cp.xmlFileName == 'kuhnFBP3135.xml' then
 		workTool.cp.iskuhnFBP3135 = true
-		
+
 	-- ###########################################################
 
 	-- [7] MOD OTHER TOOLS
@@ -262,8 +262,8 @@ function courseplay:setNameVariable(workTool)
 		workTool.cp.isRopaTiger6 = true;
 		workTool.cp.isHarvesterSteerable = true;
 		workTool.cp.useCrabSteeringMode = 1;
-		
-		
+
+
 	elseif workTool.cp.xmlFileName == 'holmerHR9.xml' then
 		workTool.cp.isHolmerHR9 = true;
 
@@ -278,13 +278,13 @@ function courseplay:setNameVariable(workTool)
 	elseif workTool.cp.xmlFileName ==  'ropaNawaRoMaus.xml' then
 		workTool.cp.isRopaNawaRoMaus = true;
 		workTool.cp.isSugarBeetLoader = true
-		
+
 	elseif workTool.cp.xmlFileName ==  'CaseIHA8800MR.xml' then
 		workTool.cp.isCaseIHA8800MR = true;
 		workTool.cp.fixedCombineOffset = 5.3
 		workTool.cp.fixedChopperOffset = 5.3
 		workTool.cp.isHarvesterSteerable = true;
-		
+
 	-- Harvesters (attachable) [Giants]
 	elseif workTool.cp.xmlFileName == 'rootster604.xml' then
 		workTool.cp.isHarvesterAttachable = true;
@@ -293,32 +293,32 @@ function courseplay:setNameVariable(workTool)
 		workTool.cp.fixedCombineOffset = -4.5
 		workTool.cp.fixedChopperOffset = -4.5
 		workTool.cp.specialWorkWidth = 2.9
-	
+
 	elseif workTool.cp.xmlFileName == 'keiler2.xml' then
 		workTool.cp.isRopaKeiler2 = true;
 		workTool.cp.isHarvesterAttachable = true;
 		--workTool.cp.notToBeReversed = true;
 		workTool.cp.fixedCombineOffset = 5.5
-			
+
 	elseif workTool.cp.xmlFileName == 'SE260.xml' then
 		workTool.cp.isHarvesterAttachable = true;
 		workTool.cp.isGrimmeSE260 = true;
 		workTool.cp.notToBeReversed = true;
 		workTool.cp.specialWorkWidth = 1.6
-		
+
 	elseif workTool.cp.xmlFileName == 'mex5.xml' then
 		workTool.cp.isHarvesterAttachable = true;
 		workTool.cp.isPoettingerMex5 = true;
 		workTool.cp.fixedCombineOffset = 5.5
 		workTool.cp.fixedChopperOffset = 5.5
-	
+
 	-- SWT7 [Giants DLC]
 	elseif workTool.cp.xmlFileName == 'SWT7.xml' then
 		workTool.cp.isTraileredChopper = true;
 		workTool.cp.notToBeReversed = true;
 		workTool.cp.overwriteTurnRadius = 9;
 		workTool.cp.isSWT7 = true;
-		
+
 
 	-- ###########################################################
 	-- [2] STEERABLE VEHICLES
@@ -345,7 +345,7 @@ function courseplay:setNameVariable(workTool)
 	-- Zunhammer TV [Giants Mod: Holmer Pack]
 	elseif workTool.cp.xmlFileName == 'zunhammerTV.xml' then
 		workTool.cp.isLiquidManureOverloader = true;
-	
+
 	-- Zunhammer Vibro [Giants Mod: Holmer Pack]
 	elseif workTool.cp.xmlFileName == 'zunhammerVibro.xml' then
 		workTool.cp.isZunhammerVibro = true;
@@ -398,21 +398,21 @@ function courseplay:setNameVariable(workTool)
 	elseif workTool.cp.xmlFileName == 'arcusinFSX6372.xml' then
 		workTool.cp.isArcusinFSX6372 = true;
 		workTool.cp.baleRowWidth = 3
-		
+
 	--Krone Premos5000 [strawHarvestAddon]
 	elseif 	workTool.cp.xmlFileName == 'premos5000.xml' then
-		workTool.cp.isKronePremos5000 = true;	
+		workTool.cp.isKronePremos5000 = true;
 		workTool.cp.isAttachedCombine = true;
 		workTool.cp.fixedCombineOffset = -4.8;
-		
+
 	elseif 	workTool.cp.xmlFileName == 'comprimaV180XC.xml' then
 		workTool.cp.isKroneComprimaV180XC = true;
 		workTool.cp.isStrawHarvestAddonBaler = true;
-	
+
 	elseif 	workTool.cp.xmlFileName == 'bigPack1290HDPII.xml' then
 		workTool.cp.isKroneBigPack1290HDPII = true;
-		workTool.cp.isStrawHarvestAddonBaler = true;	
-		
+		workTool.cp.isStrawHarvestAddonBaler = true;
+
 	-- ###########################################################
 	-- [6] OTHER TOOLS
 	-- WHEEL LOADERS [Giants]
@@ -444,7 +444,7 @@ function courseplay:setNameVariable(workTool)
 		workTool.cp.isAgrisemCultiplowPlatinum8m = true;
 		workTool.cp.notToBeReversed = true; --TODO Fix reverseing with this tool. The distances on this tool are calculated incorrectly causeing the reverse turn to fail
 		workTool.cp.overwriteTurnRadius = 7;
-		
+
 	--Bednar SM 180000 [Giants Big Bud DLC]
 	elseif workTool.cp.xmlFileName == 'BednarSM18000.xml' then
 		workTool.cp.isBednarSM18000 = true
@@ -557,7 +557,7 @@ function courseplay:setNameVariable(workTool)
 	if courseplay:isSprayer(workTool) then
 		if workTool:getFillUnitAllowsFillType(1,g_fillTypeManager.nameToIndex.LIQUIDMANURE) then
 			workTool.cp.isLiquidManureSprayer = true;
-		elseif workTool:getFillUnitAllowsFillType(1,g_fillTypeManager.nameToIndex.MANURE) then    
+		elseif workTool:getFillUnitAllowsFillType(1,g_fillTypeManager.nameToIndex.MANURE) then
 			workTool.cp.isManureSprayer = true;
 		end;
 	end;
@@ -706,9 +706,9 @@ function courseplay:askForSpecialSettings(self, object)
 		object.cp.specialUnloadDistance = -1.8;
 		automaticToolOffsetX = -2.4; -- ToolOffsetX is 0.2 meters to the left
 
-	elseif object.cp.isRopaKeiler2 then	
+	elseif object.cp.isRopaKeiler2 then
 		automaticToolOffsetX = -2; -- ToolOffsetX is 2 meters to the left
-		
+
 	elseif object.cp.isArcusinFSX6372 then
 		object.cp.specialUnloadDistance = -3.8;
 		automaticToolOffsetX = -2.4; -- ToolOffsetX is 0.2 meters to the left
@@ -766,7 +766,7 @@ function courseplay:askForSpecialSettings(self, object)
 		automaticToolOffsetX = -2.5;
 
 	elseif object.cp.isZunhammerVibro  then
-		local tractor = object.attacherVehicle; 
+		local tractor = object.attacherVehicle;
 		if tractor.cp.noStopOnEdge then
 			tractor.cp.noStopOnEdge = false;
 			tractor.cp.noStopOnTurn = false;
@@ -791,7 +791,7 @@ function courseplay:askForSpecialSettings(self, object)
 
 	elseif object.cp.isBednarSM18000 then
 		object.cp.backMarkerOffsetCorrection = -3.25;
-		
+
 	elseif object.cp.isSWT7 then
 		automaticToolOffsetX = -2.2;
 
