@@ -16,12 +16,15 @@
 			(Setup_1.Specialization_1 and Setup_1.Specialization_2) or Setup_2.Specialization_1
 			= Setup 1 or Setup 2
 			if one of the Setup was found => mode is Allowed
+
 	DisallowedSetups:
 		- for now only one Setup used as an OR GATE
 		example:
 			Setup_1.Specialization_1 or Setup_1.Specialization_2 or ...
 			if one of them was found => mode is Disallowed completely, regardless of the checked object
+
 	
+
 -->
 <ValidModeSetup>
 	<!--GrainTransportAIDriver(1)-->
@@ -287,3 +290,5 @@
 		</DisallowedSetups>
 	</Mode>
 </ValidModeSetup>
+
+
