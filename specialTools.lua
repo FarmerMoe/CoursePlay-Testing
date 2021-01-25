@@ -48,10 +48,10 @@ function courseplay:setNameVariable(workTool)
 		elseif spec == Trailer	 		   then workTool.cp.hasSpecializationTrailer			 = true;
 		elseif spec == BunkerSiloCompacter then workTool.cp.hasSpecializationBunkerSiloCompacter = true;
 		elseif spec == soilSampler		then
-			courseplay:debug('EBP: soilSampler spec is found' );
+			courseplay:debug('EBP: soilSampler spec is found ln51 SpecialTools' );
 			workTool.cp.hasSpecializationSoilSampler = true;
 		elseif spec == FS19_precisionFarming.soilSampler		then
-			courseplay:debug('EBP: FS19_precisionFarming spec is found' );
+			courseplay:debug('EBP: FS19_precisionFarming spec is found ln54 SpecialTools' );
 			workTool.cp.hasSpecializationSoilSampler = true;
 		end;
 	end;
@@ -79,7 +79,7 @@ function courseplay:setNameVariable(workTool)
 	if workTool.cp.xmlFileName == 'isariaScout.xml' then
 		courseplay:debug('EBP: Isaria specs')
 		workTool.cp.lengthOffset = 2.5
-		workTool.cp.turnOnFoldDirection = 1
+		--workTool.cp.turnOnFoldDirection = 1
 	end;
 
 	--[[		for i,spec in pairs(workTool.specializationNames) do
@@ -148,14 +148,18 @@ function courseplay:setNameVariable(workTool)
 
 	-- [2] SOIL SAMPLERS
 	if workTool.spec_soilSampler or workTool.cp.hasSpecializationSoilSampler then
-
-
-		courseplay:debug('EBP: workTool.spec_soilSampler ' .. workTool.typeName .. ' has Soil Specialization')
+		courseplay:debug('EBP: workTool.spec_soilSampler: ' .. workTool.typeName .. ' has Soil Specialization')
+		if workTool.spec_soilSampler then
+			courseplay:debug('EBP: spec_soilSampler found')
+		end
+		if workTool.cp.hasSpecializationSoilSampler then
+			courseplay:debug('EBP: cp.hasSpecializationSoilSampler found')
+		end
 
 		-- EBP put any soil sampler special variables here ..
 		if workTool.spec_soilSampler.samplingRadius ~= nil then
 			-- Reduce oval size by truncating decimal thereby only using integer number.
-			workTool.cp.specialWorkWidth = math.floor(workTool.spec_soilSampler.samplingRadius -0.5);
+			workTool.cp.specialWorkWidth = math.floor(workTool.spec_soilSampler.samplingRadius - 0.5);
 		end;
 
 	end;

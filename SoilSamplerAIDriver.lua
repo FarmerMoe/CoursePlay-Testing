@@ -49,7 +49,7 @@ end
 
 
 
-function getAIImpWithSpec(vehicle, specialization)
+function SoilSamplerAIDriver:getAIImpWithSpec(vehicle, specialization)
 	courseplay:debug('EBP: getAIImpWithSpec get attached implements ')
 	local aiImplements = vehicle:getAttachedAIImplements()
 
