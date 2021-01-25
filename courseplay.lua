@@ -8,7 +8,7 @@
 -- @history: http://courseplay.github.io/courseplay/en/changelog/index.html
 --
 -- Copyright (C) 2014 Courseplay Dev Team
--- 
+--
 
 -- add steady courseplay identifier to global environment
 local globalEnvironment = getfenv (0);
@@ -59,23 +59,23 @@ local function initialize()
     	'courseeditor',
     	'CourseEditorEvent',
     	'clicktoswitch',
-		'debug', 
-		'distance', 
+		'debug',
+		'distance',
 		'fields',
-		'fruit', 
+		'fruit',
 		'helpers',
-		'hud', 
-		'input', 
+		'hud',
+		'input',
 		'recording',
 		'reverse',
 		'settings',
 		'GlobalSettings',
 		'ValidModeSetupHandler',
-		'signs', 
-		'specialTools', 
-		'start_stop', 
+		'signs',
+		'specialTools',
+		'start_stop',
 		'toolManager',
-		'triggers', 
+		'triggers',
 		'turn',
 		'TrafficCollision',
 		'ProximitySensor',
@@ -103,6 +103,7 @@ local function initialize()
 		'TriggerShovelModeAIDriver',
 		'Conflict',
 		'AITurn',
+		'VehicleConfigurations',
 		'SoilSamplerAIDriver',
 		'course-generator/geo',
 		'course-generator/Island',
@@ -209,7 +210,7 @@ local function setGlobalData()
 	courseplay.lights.HEADLIGHT_OFF = 0;
 	courseplay.lights.HEADLIGHT_STREET = 1;
 	courseplay.lights.HEADLIGHT_FULL = 7;
-	
+
 	-- 2D/debug lines display options
 	courseplay.COURSE_2D_DISPLAY_OFF	 = 0;
 	courseplay.COURSE_2D_DISPLAY_2DONLY	 = 1;
@@ -294,38 +295,26 @@ local function setGlobalData()
 	[25]={name='self.cp.turnDiameter',dataFormat='Float'},
 	[26]={name='self.cp.coursePlayerNum',dataFormat='Int'}, --??
 	[27]={name='self.cp.laneOffset',dataFormat='Float'},
-	[28]={name='self.cp.toolOffsetX',dataFormat='Float'},
-	[29]={name='self.cp.toolOffsetZ',dataFormat='Float'},
-	[30]={name='self.cp.loadUnloadOffsetX',dataFormat='Float'},
-	[31]={name='self.cp.loadUnloadOffsetZ',dataFormat='Float'},
-	[32]={name='self.cp.hud.currentPage',dataFormat='Int'},
-	[33]={name='self.cp.waypointIndex',dataFormat='Int'},
-	[34]={name='self.cp.isRecording',dataFormat='Bool'},
-	[35]={name='self.cp.recordingIsPaused',dataFormat='Bool'},
-	[36]={name='self.cp.searchCombineAutomatically',dataFormat='Bool'},
-	[37]={name='self.cp.waitTime',dataFormat='Int'},
-	[38]={name='self.cp.multiTools',dataFormat='Int'},
-	[39]={name='self.cp.alignment.enabled',dataFormat='Bool'},
-	[40]={name='self.cp.hasSowingMachine',dataFormat='Bool'},
-	[41]={name='self.cp.generationPosition.fieldNum',dataFormat='Int'},
-	[42]={name='self.cp.generationPosition.hasSavedPosition',dataFormat='Bool'},
-	[43]={name='self.cp.generationPosition.x',dataFormat='Float'},
-	[44]={name='self.cp.generationPosition.z',dataFormat='Float'}
+	[28]={name='self.cp.loadUnloadOffsetX',dataFormat='Float'},
+	[29]={name='self.cp.loadUnloadOffsetZ',dataFormat='Float'},
+	[30]={name='self.cp.hud.currentPage',dataFormat='Int'},
+	[31]={name='self.cp.waypointIndex',dataFormat='Int'},
+	[32]={name='self.cp.isRecording',dataFormat='Bool'},
+	[33]={name='self.cp.recordingIsPaused',dataFormat='Bool'},
+	[34]={name='self.cp.searchCombineAutomatically',dataFormat='Bool'},
+	[35]={name='self.cp.waitTime',dataFormat='Int'},
+	[36]={name='self.cp.multiTools',dataFormat='Int'},
+	[37]={name='self.cp.alignment.enabled',dataFormat='Bool'},
+	[38]={name='self.cp.hasSowingMachine',dataFormat='Bool'},
+	[39]={name='self.cp.generationPosition.fieldNum',dataFormat='Int'},
+	[40]={name='self.cp.generationPosition.hasSavedPosition',dataFormat='Bool'},
+	[41]={name='self.cp.generationPosition.x',dataFormat='Float'},
+	[42]={name='self.cp.generationPosition.z',dataFormat='Float'}
 	}
-	
-	-- TODO: see where is the best to instantiate these settings. Maybe we need a container for all these
-	courseplay.globalSettings = SettingsContainer("globalSettings")
-	courseplay.globalSettings:addSetting(LoadCoursesAtStartupSetting)
-	courseplay.globalSettings:addSetting(AutoFieldScanSetting)
-	courseplay.globalSettings:addSetting(WorkerWagesSetting)
-	courseplay.globalSettings:addSetting(ClickToSwitchSetting)
-	courseplay.globalSettings:addSetting(ShowMiniHudSetting)
-	courseplay.globalSettings:addSetting(EnableOpenHudWithMouseGlobalSetting)
-	courseplay.globalSettings:addSetting(AutoRepairSetting)
+
+	courseplay.globalSettings = SettingsContainer.createGlobalSettings()
 	courseplay.globalCourseGeneratorSettings = SettingsContainer.createGlobalCourseGeneratorSettings()
 	courseplay.globalPathfinderSettings = SettingsContainer.createGlobalPathfinderSettings()
-
-	--print("\t### Courseplay: setGlobalData() finished");
 end;
 
 
