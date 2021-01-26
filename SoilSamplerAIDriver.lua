@@ -20,8 +20,10 @@ function SoilSamplerAIDriver:init(vehicle)
 	self:initStates(SoilSamplerAIDriver.myStates)
 	self.mode = courseplay.MODE_FIELDWORK
 
-	self.soilProbe = getAIImpWithSpec(vehicle, soilSampler)
-	-- AIDriverUtil.getAIImplementWithSpecialization(vehicle, soilSampler)
+	courseplay:debug('EBP: headed to custom routine');
+	-- SoilSamplerAIDriver:getAIImpWithSpec(vehicle, soilSampler)
+	-- courseplay:debug('EBP: back from custom routine');
+	self.soilProbe = AIDriverUtil.getAIImplementWithSpecialization(vehicle, soilSampler)
   if self.soilProbe then
 		courseplay:debug('EBP: SoilSamplerAIDriver:init soilProbe found')
 		self.samplingNode = self.soilProbe.samplingNode
@@ -53,23 +55,31 @@ function SoilSamplerAIDriver:getAIImpWithSpec(vehicle, specialization)
 	courseplay:debug('EBP: getAIImpWithSpec get attached implements ')
 	local aiImplements = vehicle:getAttachedAIImplements()
 
-	courseplay:debug('EBP: getAttachedAIImplements)
+	courseplay:debug('EBP: getAttachedAIImplements')
 
 	local vehicleName = vehicle and nameNum(vehicle) or "Unknown vehicle"
 	if vehicleName == 'XUV865M' or vehicleName == '724 Vario' then
-		courseplay:debug('EBP: Review AIimplements on selected vehicles' .. vehicleName)
+		courseplay:debug('EBP: Review AIimplements on selected vehicles: ' .. vehicleName)
+
+
+
 
 		for _, implement in ipairs(aiImplements) do
-
-			IPN = implement.object and nameNum(implement.object) or "Unknown"
-			courseplay:debug('EBP: Implement name: ' .. IPN)
-
+		-- NOTHING seems to get done here
+			if implement ~= nil then
+				IPN = implement and nameNum(implement) or "Unknown"
+				courseplay:debug('EBP: Implement name: ' .. IPN)
+			else
+				courseplay:debug('EBP: Implement is nil')
+			end
 		end
+		-- this is run
+	courseplay:debug('EBP: Post LOOP ***********************************************')
 	end
 
-	if SpecializationUtil.hasSpecialization(specialization, implement.object.specializations) then
-		return implement.object
-	end
+	--if SpecializationUtil.hasSpecialization(specialization, implement.object.specializations) then
+	--	return implement.object
+	--end
 
 	--[[
 	courseplay:debug('EBP: getImplementWithSpecializationFromList')

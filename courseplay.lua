@@ -104,6 +104,7 @@ local function initialize()
 		'Conflict',
 		'AITurn',
 		'VehicleConfigurations',
+		'SoilSamplerAIDriver',
 		'course-generator/geo',
 		'course-generator/Island',
 		'course-generator/courseGenerator',

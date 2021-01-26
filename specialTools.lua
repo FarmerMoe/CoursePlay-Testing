@@ -39,4 +39,23 @@ function courseplay:setNameVariable(workTool)
 	elseif workTool.animationParts ~= nil and workTool.animationParts[2] ~= nil and workTool.toggleUnloadingState ~= nil and workTool.setUnloadingState ~= nil then
 		workTool.cp.isAugerWagon = true;
 	end;
+
+	-- [2] SOIL SAMPLERS
+	if workTool.typeName == 'FS19_precisionFarming.SoilSampler' then
+		-- workTool.spec_soilSampler or workTool.cp.hasSpecializationSoilSampler then
+		courseplay:debug('EBP: workTool.spec_soilSampler: ' .. workTool.typeName .. ' has Soil Specialization')
+		if workTool.spec_soilSampler then
+			courseplay:debug('EBP: spec_soilSampler found')
+		end
+		--if workTool.cp.hasSpecializationSoilSampler then
+		--	courseplay:debug('EBP: cp.hasSpecializationSoilSampler found')
+		--end
+
+		-- EBP put any soil sampler special variables here ..
+		if workTool.spec_soilSampler.samplingRadius ~= nil then
+			-- Reduce oval size by truncating decimal thereby only using integer number.
+			workTool.cp.specialWorkWidth = math.floor(workTool.spec_soilSampler.samplingRadius - 0.5);
+		end;
+	end;
+	
 end;
