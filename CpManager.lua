@@ -123,6 +123,9 @@ function CpManager:loadMap(name)
 	addConsoleCommand( 'cpToggleDevhelperDebug', 'Toggle development helper visual debug info', 'toggleDevhelperDebug', self )
 	addConsoleCommand( 'cpShowCombineUnloadManagerStatus', 'Show combine unload manager status', 'showCombineUnloadManagerStatus', self )
 	addConsoleCommand( 'cpReadVehicleConfigurations', 'Read custom vehicle configurations', 'loadFromXml', g_vehicleConfigurations)
+	
+	addConsoleCommand( 'cpCreateVehicleDebugSparseHook', 'Create a debug Sparse Hook', 'createVehicleVariableDebugSparseHook', self)
+
 
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-- TRIGGERS
@@ -301,6 +304,7 @@ function CpManager:update(dt)
 		courseplay.fields.filter:setValueCompareParams("greater", 0) -- more than 0, so it is a field
 	end
 	g_devHelper:update()
+	self:printVariableDebugSparseHook()
 end;
 
 
@@ -643,6 +647,51 @@ function CpManager:traceOnForTable(t, tableName)
 	end
 end
 
+---Creates a debug loop of n-iterations and a delay of m-ticks
+---@param string variable name/path to print  
+---@param function function to print the variable name
+---@param int optional number of total iterations, default is 5
+---@param int optional delay of update ticks in between, default is 100
+function CpManager:createVariableDebugSparseHook(variableName,printVariableFunc,numIterations,delayBetweenIterations)
+	if self.debugSparseHookVariable == nil then
+		self.debugSparseHookVariable = {
+			variableName = variableName,
+			printVariableFunc = printVariableFunc,
+			numIterations = numIterations or 5,
+			delayBetweenIterations = delayBetweenIterations or 100
+		}
+	end
+end
+
+---Creates a debug loop of n-iterations and a delay of m-ticks for vehicle variables
+---@param string variable name/path to print  
+---@param int optional number of total iterations, default is 5
+---@param int optional delay of update ticks in between, default is 100
+function CpManager:createVehicleVariableDebugSparseHook(variableName,numIterations,delayBetweenIterations)
+	if g_currentMission.controlledVehicle then
+		self:createVariableDebugSparseHook(variableName,self.printVehicleVariable,numIterations,delayBetweenIterations)
+	else 
+		courseplay.info("controlledVehicle not found!")
+	end
+end
+
+---Prints the debug sparse hook variable 
+function CpManager:printVariableDebugSparseHook()
+	if self.debugSparseHookVariable then 
+		local delayBetweenIterations = self.debugSparseHookVariable.delayBetweenIterations
+		if g_updateLoopIndex % delayBetweenIterations == 0 then
+			local variableName = self.debugSparseHookVariable.variableName
+			local numIterations = self.debugSparseHookVariable.numIterations
+			local printVariableFunc = self.debugSparseHookVariable.printVariableFunc
+			printVariableFunc(self,variableName,1)
+			numIterations = numIterations - 1
+			if numIterations < 1 then 
+				self.debugSparseHookVariable = nil
+			end
+		end
+	end
+end
+
 --- get a reference pointing to the global variable 'variableName'
 -- can handle multiple levels (but not arrays, yet) like foo.bar
 function CpManager:getVariable(variableName)
@@ -841,12 +890,10 @@ end;
 --FieldScan startup dialog and github info
 function CpManager:showYesNoDialogue(title, text, callbackFn)
 	-- don't show anything if the tutorial dialog is open (it takes a while until is isOpen shows true after startup, hence the clock)
-	--courseplay.debugFormat(12, "clock %d %s", courseplay.clock, tostring(g_gui.guis.YesNoDialog.target and g_gui.guis.YesNoDialog.target.isOpen))
 	if courseplay.clock < 2000 or (g_gui.guis.YesNoDialog.target and g_gui.guis.YesNoDialog.target.isOpen) then
 		return
 	end
-	--courseplay.debugFormat(12, text)
-	local text =string.format("%s\n %s",courseplay:loc('COURSEPLAY_YES_NO_FIELDSCAN'),courseplay:loc('COURSEPLAY_SUPPORT_INFO')) 
+	local text =string.format("%s\n %s",courseplay:loc('COURSEPLAY_YES_NO_FIELDSCAN'),courseplay:loc('COURSEPLAY_SUPPORT_INFO'))
 	g_gui:showYesNoDialog({text=text, title=title, callback=callbackFn, target=self})
 end;
 
@@ -942,6 +989,7 @@ function CpManager:setupGlobalInfoText()
 		RUNCOUNTER_ERROR_FOR_TRIGGER		= { level =  0, text = 'COURSEPLAY_RUNCOUNTER_ERROR_FOR_TRIGGER' };
 		WAITING_FOR_UNLOADERS				= { level =  0, text = 'COURSEPLAY_WAITING_FOR_UNLOADERS' };
 		WAITING_FOR_LEVELCOMPACTAIDRIVER	= { level =  0, text = 'COURSEPLAY_WAITING_FOR_LEVELCOMPACTAIDRIVER' };
+		NO_FIELD_SELECTED					= { level = -1, text = 'COURSEPLAY_NO_FIELD_SELECTED' };
 	};
 end;
 

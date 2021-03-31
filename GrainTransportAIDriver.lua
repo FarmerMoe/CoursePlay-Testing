@@ -21,9 +21,10 @@ GrainTransportAIDriver = CpObject(AIDriver)
 
 --- Constructor
 function GrainTransportAIDriver:init(vehicle)
-	courseplay.debugVehicle(11,vehicle,'GrainTransportAIDriver:init()')
+	courseplay.debugVehicle(courseplay.DBG_AI_DRIVER,vehicle,'GrainTransportAIDriver:init()')
 	AIDriver.init(self, vehicle)
 	self.mode = courseplay.MODE_GRAIN_TRANSPORT
+	self.debugChannel = courseplay.DBG_MODE_1
 	self.totalFillCapacity = 0
 end
 
@@ -37,7 +38,6 @@ function GrainTransportAIDriver:start(startingPoint)
 	self.nextClosestExactFillRootNode = nil
 	self.vehicle:setCruiseControlMaxSpeed(self.vehicle:getSpeedLimit() or math.huge)
 	AIDriver.start(self, startingPoint)
-	self.vehicle.cp.settings.stopAtEnd:set(false)
 	self.firstWaypointNode = WaypointNode('firstWaypoint')
 	self.firstWaypointNode:setToWaypoint(self.course, 1, true)
 end
@@ -47,6 +47,9 @@ function GrainTransportAIDriver:isAlignmentCourseNeeded(ix)
 	return false
 end
 
+function GrainTransportAIDriver:shouldStopAtEndOfCourse()
+	return false
+end
 
 --TODO: consolidate this with AIDriver:drive() 
 function GrainTransportAIDriver:drive(dt)
@@ -269,4 +272,14 @@ function GrainTransportAIDriver:delete()
 		self.firstWaypointNode:destroy()
 	end
 	AIDriver.delete(self)
+end
+
+function GrainTransportAIDriver:isProximitySwerveEnabled(vehicle)
+	if vehicle.cp and vehicle.cp.driver and vehicle.cp.driver.is_a(OverloaderAIDriver) then
+		-- the other vehicle as an overloader, potentially waiting for us. We should not swerve
+		-- as we need to drive under the pipe of the overloader wagon
+		return not vehicle.cp.driver:isNearOverloadPoint()
+	else
+		return true
+	end
 end

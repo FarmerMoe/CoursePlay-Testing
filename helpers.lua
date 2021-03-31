@@ -25,78 +25,6 @@ function tableConcat(...)
 	return t;
 end;
 
--- TODO: This and isLowered() should be in an AIDriverUtil class or at least in a different file, like toolManager.lua
-function courseplay:isFolding(workTool) --returns isFolding, isFolded, isUnfolded
-	if not courseplay:isFoldable(workTool) then
-		return false, false, true;
-	end;
-
-	local isFolding, isFolded, isUnfolded = false, true, true;
-	courseplay:debug(string.format('%s: isFolding(): realUnfoldDirection=%s, turnOnFoldDirection=%s, startAnimTime=%s, foldMoveDirection=%s', nameNum(workTool), tostring(workTool.cp.realUnfoldDirection), tostring(workTool.turnOnFoldDirection), tostring(workTool.startAnimTime), tostring(workTool.foldMoveDirection)), 17);
-	
-	if workTool.spec_foldable.foldAnimTime ~= (workTool.spec_foldable.oldFoldAnimTime or 0) then
-		if workTool.spec_foldable.foldMoveDirection > 0 and workTool.spec_foldable.foldAnimTime < 1 then
-			isFolding = true;
-		elseif workTool.spec_foldable.foldMoveDirection < 0 and workTool.spec_foldable.foldAnimTime > 0 then
-			isFolding = true;
-		end;
-		workTool.spec_foldable.oldFoldAnimTime = workTool.spec_foldable.foldAnimTime;
-	end;
-
-	isUnfolded = workTool:getIsUnfolded();
-	isFolded = not isUnfolded and not isFolding;
-	
-	courseplay:debug(string.format('\treturn isFolding=%s, isFolded=%s, isUnfolded=%s', tostring(isFolding), tostring(isFolded), tostring(isUnfolded)), 17);
-	return isFolding, isFolded, isUnfolded;
-end;
-
--- TODO: Giants question: this is copied from Attachable.getCanAIImplementContinueWork() but when calling it with spec_attachable, it blows up with
--- dataS/scripts/vehicles/specializations/Attachable.lua(1026) : attempt to index local 'jointDesc' (a nil value)
--- The stock Giants getIsLowered() returns true the moment the tool starts moving. What we need however is when
--- the tool is in the final lowered position.
-function courseplay:isLowered(workTool)
-	local spec = workTool.spec_attachable
-	if not workTool:getAINeedsLowering() or not spec then return true end
-	local isLowered = true
-	if spec.lowerAnimation ~= nil then
-		local time = workTool:getAnimationTime(spec.lowerAnimation)
-		isLowered = time == 1 or time == 0
-	end
-	local jointDesc = spec.attacherVehicle:getAttacherJointDescFromObject(workTool)
-	if jointDesc.allowsLowering and workTool:getAINeedsLowering() then
-		if jointDesc.moveDown then
-			isLowered = (jointDesc.moveAlpha == jointDesc.lowerAlpha or jointDesc.moveAlpha == jointDesc.upperAlpha) and isLowered
-		end
-	end
-	return isLowered
-end
-
-function courseplay:isAnimationPartPlaying(workTool, index)
-	if type(index) == "number" then
-		local animPart = workTool.animationParts[index];
-		if animPart == nil then
-			print(nameNum(workTool) .. ": animationParts[" .. tostring(index) .. "] doesn't exist! isAnimationPartPlaying() returns nil");
-			return nil;
-		end;
-		return animPart.clipStartTime == false and animPart.clipEndTime == false;
-	elseif type(index) == "table" then
-		for i,singleIndex in pairs(index) do
-			local animPart = workTool.animationParts[singleIndex];
-			if animPart == nil then
-				print(nameNum(workTool) .. ": animationParts[" .. tostring(singleIndex) .. "] doesn't exist! isAnimationPartPlaying() returns nil");
-				return nil;
-			end;
-			if animPart.clipStartTime == false and animPart.clipEndTime == false then
-				return true;
-			end;
-		end;
-		return false;
-	else
-		print(nameNum(workTool) .. ": type of index doesn't work with animationParts! isAnimationPartPlaying() returns nil");
-		return nil;
-	end;
-end;
-
 function courseplay:round(num, decimals)
 	if num == nil or type(num) ~= "number" then
 		return nil;
@@ -178,7 +106,7 @@ function courseplay:setVarValueFromString(self, str, value)
 			result = value;
 		end;
 
-		courseplay:debug("					" .. table.concat(what, ".") .." = " .. tostring(result),5);
+		courseplay:debug("					" .. table.concat(what, ".") .." = " .. tostring(result),courseplay.DBG_MULTIPLAYER);
 	end;
 
 	what = nil;
@@ -649,7 +577,7 @@ function courseplay.utils:hasVarChanged(vehicle, variableName, direct)
 	local memory = vehicle.cp.varMemory[variableName];
 
 	if (memory == nil and variable ~= nil) or (memory ~= nil and (variable == nil or variable ~= vehicle.cp.varMemory[variableName])) then
-		courseplay:debug(string.format('%s: hasVarChanged(): changed variable %q - old=%q, new=%q', nameNum(vehicle), variableName, tostring(memory), tostring(variable)), 12);
+		courseplay:debug(string.format('%s: hasVarChanged(): changed variable %q - old=%q, new=%q', nameNum(vehicle), variableName, tostring(memory), tostring(variable)), courseplay.DBG_UNCATEGORIZED);
 		vehicle.cp.varMemory[variableName] = variable;
 		return true;
 	end;
@@ -843,6 +771,24 @@ function courseplay.utils:setOverlayUVsPx(overlay, UVs, textureSizeX, textureSiz
 		overlay.currentUVs = UVs;
 	end;
 end;
+
+function courseplay.utils:getUvs(UVs, textureSizeX, textureSizeY)
+	local leftX, bottomY, rightX, topY = unpack(UVs);
+
+	local fromTop = false;
+	if topY < bottomY then
+		fromTop = true;
+	end;
+	local leftXNormal = leftX / textureSizeX;
+	local rightXNormal = rightX / textureSizeX;
+	local bottomYNormal = bottomY / textureSizeY;
+	local topYNormal = topY / textureSizeY;
+	if fromTop then
+		bottomYNormal = 1 - bottomYNormal;
+		topYNormal = 1 - topYNormal;
+	end
+	return {leftXNormal,bottomYNormal, leftXNormal,topYNormal, rightXNormal,bottomYNormal, rightXNormal,topYNormal}
+end
 
 function courseplay.utils:roundToLowerInterval(num, idp)
 	return floor(num / idp) * idp;

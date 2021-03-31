@@ -25,8 +25,9 @@ function courseplay.turn() end
 function courseplay.lowerImplements() end
 function courseplay.raiseImplements() end
 
+courseplay.DBG_COURSES = 19
 courseplay.debugChannels = {}
-courseplay.debugChannels[12] = true
+courseplay.debugChannels[courseplay.DBG_COURSES] = true
 
 courseplay.settings = {}
 courseplay.hud = {}
@@ -73,7 +74,7 @@ courseplay.MODE_OVERLOADER = 3;
 courseplay.MODE_SEED_FERTILIZE = 4;
 courseplay.MODE_TRANSPORT = 5;
 courseplay.MODE_FIELDWORK = 6;
-courseplay.MODE_COMBINE_SELF_UNLOADING = 7;
+courseplay.MODE_BALE_COLLECTOR = 7;
 courseplay.MODE_LIQUIDMANURE_TRANSPORT = 8;
 courseplay.MODE_SHOVEL_FILL_AND_EMPTY = 9;
 courseplay.MODE_BUNKERSILO_COMPACTER = 10;

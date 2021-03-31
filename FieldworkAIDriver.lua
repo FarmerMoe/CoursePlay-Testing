@@ -40,6 +40,7 @@ FieldworkAIDriver.myStates = {
 	WAITING_FOR_LOWER = {},
 	WAITING_FOR_LOWER_DELAYED = {},
 	WAITING_FOR_STOP = {},
+	WAITING_FOR_WEATHER = {},
 	TURNING = {},
 	TEMPORARY = {},
 }
@@ -48,12 +49,10 @@ FieldworkAIDriver.myStates = {
 -- through multiple level of inheritances therefore we must explicitly call
 -- the base class ctr.
 function FieldworkAIDriver:init(vehicle)
-	courseplay.debugVehicle(11,vehicle,'FieldworkAIDriver:init()')
+	courseplay.debugVehicle(courseplay.DBG_AI_DRIVER,vehicle,'FieldworkAIDriver:init()')
 	AIDriver.init(self, vehicle)
 	self:initStates(FieldworkAIDriver.myStates)
-	-- waiting for tools to turn on, unfold and lower
-	self.waitingForTools = true
-	self.debugChannel = 14
+	self.debugChannel = courseplay.DBG_MODE_4
 	-- waypoint index on main (fieldwork) course where we aborted the work before going on
 	-- an unload/refill course
 	self.aiDriverData.continueFieldworkAtWaypoint = 1
@@ -173,6 +172,10 @@ function FieldworkAIDriver:isProximitySwerveEnabled()
 			self.state == self.states.RETURNING_TO_FIRST_POINT
 end
 
+function FieldworkAIDriver:shouldStopAtEndOfCourse()
+	return true
+end
+
 --- Start the course and turn on all implements when needed
 --- @param startingPoint StartingPointSetting at which waypoint to start the course
 function FieldworkAIDriver:start(startingPoint)
@@ -185,15 +188,18 @@ function FieldworkAIDriver:start(startingPoint)
 	-- always enable alignment with first waypoint, this is needed to properly start/continue fieldwork
 	self.alignmentEnabled = self.vehicle.cp.alignment.enabled
 	self.vehicle.cp.alignment.enabled = true
-	-- stop at the last waypoint by default
-	self.vehicle.cp.settings.stopAtEnd:set(true)
 	-- any offset imposed by the driver itself (tight turns, end of course, etc.), additional to any
 	-- tool offsets
 	self.aiDriverOffsetX = 0
 	self.aiDriverOffsetZ = 0
 
 	self.workWidth = courseplay:getWorkWidth(self.vehicle)
+	self.ppc:setNormalLookaheadDistance()
 
+	self:setUpAndStart(startingPoint)
+end
+
+function FieldworkAIDriver:setUpAndStart(startingPoint)
 	self:setUpCourses()
 
 	-- now that we have our unload/refill and fieldwork courses set up, see where to start
@@ -252,9 +258,6 @@ function FieldworkAIDriver:start(startingPoint)
 		end
 		startWithFieldwork = true
 	end
-
-	self.waitingForTools = true
-	self.ppc:setNormalLookaheadDistance()
 
 	if startWithFieldwork then
 		self:startFieldworkWithPathfinding(ix)
@@ -368,7 +371,10 @@ function FieldworkAIDriver:drive(dt)
 			return
 		end
 	elseif self.state == self.states.ON_UNLOAD_OR_REFILL_COURSE then
-		self:driveUnloadOrRefill(dt)
+		local giveUpControl = self:driveUnloadOrRefill(dt)
+		if giveUpControl then 
+			return 
+		end
 	elseif self.state == self.states.RETURNING_TO_FIRST_POINT then
 		self:setSpeed(self:getFieldSpeed())
 		self.triggerHandler.fillableObject = nil
@@ -422,20 +428,30 @@ function FieldworkAIDriver:driveFieldwork(dt)
 			self:checkFillLevels()
 		end
 	elseif self.fieldworkState == self.states.WORKING then
-		self:setSpeed(self:getWorkSpeed())
-		self:manageConvoy()
-		self:checkWeather()
-		self:checkFillLevels()
+		self:work()
 	elseif self.fieldworkState == self.states.UNLOAD_OR_REFILL_ON_FIELD then
 		self:driveFieldworkUnloadOrRefill()
 	elseif self.fieldworkState == self.states.TEMPORARY then
 		self:setSpeed(self:getFieldSpeed())
 	elseif self.fieldworkState == self.states.ON_CONNECTING_TRACK then
 		self:setSpeed(self:getFieldSpeed())
+	elseif self.fieldworkState == self.states.WAITING_FOR_WEATHER then
+		self:setSpeed(0)
+		self:checkWeather()
 	elseif self.fieldworkState == self.states.TURNING and self.aiTurn then
 		iAmDriving = self.aiTurn:drive(dt)
 	end
 	return iAmDriving
+end
+
+--- Do the actual fieldwork. This is extracted here so derived classes can use the
+--- existing start/end work mechanisms to lower/raise start/stop implements and only
+--- need to implement the actual work themselves.
+function FieldworkAIDriver:work()
+	self:setSpeed(self:getWorkSpeed())
+	self:manageConvoy()
+	self:checkWeather()
+	self:checkFillLevels()
 end
 
 function FieldworkAIDriver:getNominalSpeed()
@@ -495,7 +511,7 @@ function FieldworkAIDriver:stopAndRefuel()
 end
 
 ---@return boolean true if unload took over the driving
-function FieldworkAIDriver:driveUnloadOrRefill()
+function FieldworkAIDriver:driveUnloadOrRefill(dt)
 	if self.course:isTemporary() then
 		-- use the courseplay speed limit until we get to the actual unload course fields (on alignment/temporary)
 		self:setSpeed(self.vehicle.cp.speeds.field)
@@ -624,7 +640,7 @@ end
 
 --release the driver completely once entered
 function FieldworkAIDriver:shouldDriverBeReleased()
-	if self.vehicle:getIsEntered() and self.shouldBeReleasedOnceEntered then
+	if (self.vehicle:getIsEntered() or self.vehicle:getIsControlled()) and self.shouldBeReleasedOnceEntered then
 		self.shouldBeReleasedOnceEntered = nil
 		--unitl there is leftover code in courseplay:stop() we need to use it
 		--setCourseplayFunc used as a way to call it on server and client
@@ -865,11 +881,12 @@ function FieldworkAIDriver:manageConvoy()
 	local closestDistance = math.huge
 	for _, otherVehicle in pairs(CpManager.activeCoursePlayers) do
 		if otherVehicle ~= self.vehicle and otherVehicle.cp.settings.convoyActive:is(true) and self:hasSameCourse(otherVehicle) then
-			local myProgress = self:getProgress()
+			local myProgress, myWpIx = self:getProgress()
 			local length = self.fieldworkCourse:getLength()
-			local otherProgress = otherVehicle.cp.driver:getProgress()
-			self:debugSparse('convoy: my progress %.1f%%, other progress %.1f%%, 100%% %d', 
-					myProgress * 100, otherProgress * 100, length)
+			local otherProgress, otherWpIx = otherVehicle.cp.driver:getProgress()
+			self:debugSparse(
+				'convoy: my progress at waypoint %d is %.3f%%, %s progress at waypoint %d is %.3f%%, 100%% %d m',
+					myWpIx, myProgress * 100, nameNum(otherVehicle), otherWpIx, otherProgress * 100, length)
 			total = total + 1
 			if myProgress < otherProgress then
 				position = position + 1
@@ -877,6 +894,8 @@ function FieldworkAIDriver:manageConvoy()
 				if distance < closestDistance then
 					closestDistance = distance
 				end
+				self:debugSparse('convoy: my position %d, calculated distance from %s is %.3f m',
+					position, nameNum(otherVehicle), distance)
 			end
 		end
 	end
@@ -884,7 +903,8 @@ function FieldworkAIDriver:manageConvoy()
 	-- stop when I'm too close to the combine in front of me
 	if position > 1 then
 		if closestDistance <  self.vehicle.cp.settings.convoyMinDistance:get() then
-			self:debugSparse('too close (%.1f) to other vehicles in convoy, holding.', closestDistance)
+			self:debugSparse('too close (%.1f m < %.1f) to other vehicles in convoy, holding.',
+				closestDistance, self.vehicle.cp.settings.convoyMinDistance:get())
 			self:setSpeed(0)
 			self:overrideAutoEngineStop()
 		end
@@ -892,7 +912,6 @@ function FieldworkAIDriver:manageConvoy()
 		closestDistance = 0
 	end
 
-	-- TODO: check for change should be handled by setCpVar()
 	self.convoyCurrentDistance=closestDistance
 	self.convoyCurrentPosition=position
 	self.convoyTotalMembers=total
@@ -922,16 +941,6 @@ function FieldworkAIDriver:foldImplements()
 			end
 		end
 	end
-end
-
-function FieldworkAIDriver:isAllUnfolded()
-	for _,workTool in pairs(self.vehicle.cp.workTools) do
-		if courseplay:isFoldable(workTool) then
-			local isFolding, isFolded, isUnfolded = courseplay:isFolding(workTool)
-			if not isUnfolded then return false end
-		end
-	end
-	return true
 end
 
 function FieldworkAIDriver:clearRemainingTime()
@@ -968,11 +977,18 @@ end
 
 function FieldworkAIDriver:checkWeather()
 	if self.vehicle.getIsThreshingAllowed and not self.vehicle:getIsThreshingAllowed() then
-		self:debugSparse('No threshing in rain...')
-		self:setSpeed(0)
-		self:setInfoText('WEATHER')
+		if self.fieldworkState ~= self.states.WAITING_FOR_WEATHER then
+			self:info('No threshing in rain or when fields are wet...')
+			self:stopWork()
+			self:setInfoText('WEATHER')
+			self.fieldworkState = self.states.WAITING_FOR_WEATHER
+		end
 	else
 		self:clearInfoText('WEATHER')
+		if self.fieldworkState == self.states.WAITING_FOR_WEATHER then
+			self:info('Rain stopped/fields dry, continue work')
+			self:changeToFieldwork()
+		end
 	end
 end
 
@@ -989,22 +1005,6 @@ end
 function FieldworkAIDriver:updateLightsOnField()
 	-- there are no beacons used on the field by default
 	self.vehicle:setBeaconLightsVisibility(false)
-end
-
-function FieldworkAIDriver:startLoweringDurationTimer()
-	-- then start but only after everything is unfolded as we don't want to include the
-	-- unfold duration (since we don't fold at the end of the row).
-	if self:isAllUnfolded() then
-		self.startedLoweringAt = self.vehicle.timer
-	end
-end
-
-function FieldworkAIDriver:calculateLoweringDuration()
-	if self.startedLoweringAt then
-		self.loweringDurationMs = self.vehicle.timer - self.startedLoweringAt
-		self:debug('Measured implement lowering duration is %.0f ms', self.loweringDurationMs)
-		self.startedLoweringAt = nil
-	end
 end
 
 function FieldworkAIDriver:getLoweringDurationMs()
@@ -1330,7 +1330,7 @@ end
 
 function FieldworkAIDriver:onDraw()
 
-	if not courseplay.debugChannels[6] then return end
+	if not courseplay.debugChannels[courseplay.DBG_IMPLEMENTS] then return end
 
 	local function showAIMarkersOfObject(object)
 		if object.getAIMarkers then

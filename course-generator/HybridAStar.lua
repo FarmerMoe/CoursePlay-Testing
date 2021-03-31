@@ -72,7 +72,12 @@ function PathfinderInterface:resume(...)
 end
 
 function PathfinderInterface:debug(...)
-    courseGenerator.debug(...)
+	if courseGenerator.isRunningInGame() then
+		courseplay.debugFormat(courseplay.DBG_PATHFINDER, ...)
+	else
+		print(string.format( ...))
+		io.stdout:flush()
+	end
 end
 
 --- Interface definition for pathfinder constraints (for dependency injection of node penalty/validity checks
@@ -632,6 +637,7 @@ function HybridAStar:rollUpPath(node, goal, path)
 		table.insert(self.path, 1, currentNode.pred)
 		currentNode = currentNode.pred
 	end
+	-- TODO: see if this really is needed after it was fixed in the Reeds-Shepp getWaypoints()
 	-- start node always points forward, make sure it is reverse if the second node is reverse...
 	self.path[1].gear = self.path[2] and self.path[2].gear or self.path[1].gear
 	self:debug('Nodes %d, iterations %d, yields %d, deltaTheta %.1f', #self.path, self.iterations, self.yields,
@@ -785,7 +791,7 @@ function HybridAStarWithAStarInTheMiddle:resume(...)
 				end
 			end
 		elseif self.phase == self.MIDDLE then
-			if not path then return true, nil end
+			if not path then return true, nil, goalNodeInvalid end
 			local lMiddlePath = HybridAStar.length(path)
 			self:debug('Direct path is %d m', lMiddlePath)
 			-- do we even need to use the normal A star or the nodes are close enough that the hybrid A star will be fast enough?

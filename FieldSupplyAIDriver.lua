@@ -39,7 +39,8 @@ function FieldSupplyAIDriver:init(vehicle)
 	self.triggerHandler.driveOnAtFillLevel = settings.driveOnAtFillLevel
 	self:initStates(FieldSupplyAIDriver.myStates)
 	self.supplyState = self.states.ON_REFILL_COURSE
-	self.mode=courseplay.MODE_FIELD_SUPPLY 
+	self.mode=courseplay.MODE_FIELD_SUPPLY
+	self.debugChannel = courseplay.DBG_MODE_8
 	self:setHudContent()
 end
 
@@ -51,7 +52,6 @@ end
 function FieldSupplyAIDriver:start(startingPoint)
 	self.refillState = self.states.REFILL_DONE
 	AIDriver.start(self,startingPoint)
-	self.vehicle.cp.settings.stopAtEnd:set(false)
 	self.state = self.states.ON_UNLOAD_OR_REFILL_COURSE
 	self:findPipe() --for Augerwagons
 end
@@ -60,6 +60,10 @@ function FieldSupplyAIDriver:stop(msgReference)
 	-- TODO: revise why FieldSupplyAIDriver is derived from FieldworkAIDriver, as it has no fieldwork course
 	-- so this override would not be necessary.
 	AIDriver.stop(self, msgReference)
+end
+
+function FieldSupplyAIDriver:shouldStopAtEndOfCourse()
+	return false
 end
 
 function FieldSupplyAIDriver:onEndCourse()

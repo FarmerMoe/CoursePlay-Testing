@@ -14,43 +14,54 @@ end;
 function courseplay:setCpMode(vehicle, modeNum)
 	if vehicle.cp.mode ~= modeNum then
 		vehicle.cp.mode = modeNum;
-		--courseplay:setNextPrevModeVars(vehicle);
 		courseplay.utils:setOverlayUVsPx(vehicle.cp.hud.currentModeIcon, courseplay.hud.bottomInfo.modeUVsPx[modeNum], courseplay.hud.iconSpriteSize.x, courseplay.hud.iconSpriteSize.y);
-		--courseplay.buttons:setActiveEnabled(vehicle, 'all');
-		--end
+		courseplay.infoVehicle(vehicle, 'Setting mode %d', modeNum)
 		courseplay:setAIDriver(vehicle, modeNum)
 	end;
 end;
 
 function courseplay:setAIDriver(vehicle, mode)
+
+	local errorHandler = function(err)
+		printCallstack()
+		courseplay.infoVehicle(vehicle, "Exception, can't init mode %d: %s", mode, tostring(err))
+		return err
+	end
+
 	if vehicle.cp.driver then
 		vehicle.cp.driver:delete()
 	end
-	local status,driver,err
+
+	local status, result
 	if mode == courseplay.MODE_TRANSPORT then
-		---@type AIDriver
-		status,driver,err,errDriverName = xpcall(AIDriver, function(err) printCallstack(); return self,err,"AIDriver" end, vehicle)
-	--local status, err = xpcall(self.cp.driver.update, function(err) printCallstack(); return err end, self.cp.driver, dt)
+		status, result = xpcall(AIDriver, errorHandler, vehicle)
 	elseif mode == courseplay.MODE_GRAIN_TRANSPORT then
-		status,driver,err,errDriverName = xpcall(GrainTransportAIDriver, function(err) printCallstack(); return self,err,"GrainTransportAIDriver" end, vehicle)
+		status, result = xpcall(GrainTransportAIDriver, errorHandler, vehicle)
 	elseif mode == courseplay.MODE_COMBI then
-		status,driver,err,errDriverName = xpcall(CombineUnloadAIDriver, function(err) printCallstack(); return self,err,"CombineUnloadAIDriver" end, vehicle)
+		status, result = xpcall(CombineUnloadAIDriver, errorHandler, vehicle)
 	elseif mode == courseplay.MODE_OVERLOADER then
-		status,driver,err,errDriverName = xpcall(OverloaderAIDriver, function(err) printCallstack(); return self,err,"OverloaderAIDriver" end, vehicle)
+		status, result = xpcall(OverloaderAIDriver, errorHandler, vehicle)
 	elseif mode == courseplay.MODE_SHOVEL_FILL_AND_EMPTY then
-		status,driver,err,errDriverName = xpcall(ShovelModeAIDriver.create, function(err) printCallstack(); return self,err,"ShovelModeAIDriver" end, vehicle)
+		status, result = xpcall(ShovelModeAIDriver.create, errorHandler, vehicle)
 	elseif mode == courseplay.MODE_SEED_FERTILIZE then
-		status,driver,err,errDriverName = xpcall(FillableFieldworkAIDriver, function(err) printCallstack(); return self,err,"FillableFieldworkAIDriver" end, vehicle)
+		status, result = xpcall(FillableFieldworkAIDriver, errorHandler, vehicle)
 	elseif mode == courseplay.MODE_FIELDWORK then
-		status,driver,err,errDriverName = xpcall(UnloadableFieldworkAIDriver.create, function(err) printCallstack(); return self,err,"UnloadableFieldworkAIDriver" end, vehicle)
+		status, result = xpcall(UnloadableFieldworkAIDriver.create, errorHandler, vehicle)
+	elseif mode == courseplay.MODE_BALE_COLLECTOR then
+		status, result = xpcall(BaleCollectorAIDriver, errorHandler, vehicle)
 	elseif mode == courseplay.MODE_BUNKERSILO_COMPACTER then
-		status,driver,err,errDriverName = xpcall(LevelCompactAIDriver, function(err) printCallstack(); return self,err,"LevelCompactAIDriver" end, vehicle)
+		status, result = xpcall(LevelCompactAIDriver, errorHandler, vehicle)
 	elseif mode == courseplay.MODE_FIELD_SUPPLY then
-		status,driver,err,errDriverName = xpcall(FieldSupplyAIDriver, function(err) printCallstack(); return self,err,"FieldSupplyAIDriver" end, vehicle)
+		status, result = xpcall(FieldSupplyAIDriver, errorHandler, vehicle)
 	end
-	vehicle.cp.driver = driver
-	if not status then
-		courseplay.infoVehicle(vehicle, "Exception, can't init %s, %s", errDriverName,tostring(err))
+	if status then
+		vehicle.cp.driver = result
+	else
+		-- give it another try as a fallback level
+		courseplay.infoVehicle(vehicle, 'Retrying initialization in mode 5')
+		status, result = xpcall(AIDriver, errorHandler, vehicle)
+		vehicle.cp.driver = status and result or nil
+		vehicle.cp.mode = courseplay.MODE_TRANSPORT
 	end
 end
 
@@ -86,15 +97,12 @@ function courseplay:setVehicleWait(vehicle, active)
 	vehicle.cp.wait = active;
 end;
 
-function courseplay:cancelWait(vehicle, cancelStopAtEnd)
+function courseplay:cancelWait(vehicle)
 	if vehicle.cp.driver then
 		vehicle.cp.driver:continue()
 	end
 	if vehicle.cp.wait then
 		courseplay:setVehicleWait(vehicle, false);
-	end;
-	if cancelStopAtEnd then
-		vehicle.cp.settings.stopAtEnd:set(false)
 	end;
 end;
 
@@ -145,7 +153,6 @@ function courseplay:changeCombineOffset(vehicle, changeBy)
 		vehicle.cp.combineOffsetAutoMode = true;
 	end;
 
-	courseplay:debug(nameNum(vehicle) .. ": manual combine_offset change: prev " .. previousOffset .. " // new " .. vehicle.cp.combineOffset .. " // auto = " .. tostring(vehicle.cp.combineOffsetAutoMode), 4);
 end
 
 function courseplay:changeTipperOffset(vehicle, changeBy)
@@ -468,7 +475,7 @@ function courseplay.settings.setReloadCourseItems(vehicle)
 		for k,v in pairs(g_currentMission.enterables) do
 			if v.hasCourseplaySpec then -- alternative way to check if SpecializationUtil.hasSpecialization(courseplay, v.specializations)
 				v.cp.reloadCourseItems = true
-				courseplay.debugVehicle(8, v,"courseplay.hud:setReloadPageOrder(%s, 2, true) TypeName: %s ;",tostring(v.name), v.typeName)
+				courseplay.debugVehicle(courseplay.DBG_COURSES, v,"courseplay.hud:setReloadPageOrder(%s, 2, true) TypeName: %s ;",tostring(v.name), v.typeName)
 				courseplay.hud:setReloadPageOrder(v, 2, true);
 			end
 		end
@@ -760,7 +767,7 @@ end;
 function courseplay:toggleHeadlandOrder(vehicle)
 	vehicle.cp.headland.orderBefore = not vehicle.cp.headland.orderBefore;
 	--vehicle.cp.headland.orderButton:setSpriteSectionUVs(vehicle.cp.headland.orderBefore and 'headlandOrdBef' or 'headlandOrdAft');
-	-- courseplay:debug(string.format('toggleHeadlandOrder(): orderBefore=%s -> set to %q, setOverlay(orderButton, %d)', tostring(not vehicle.cp.headland.orderBefore), tostring(vehicle.cp.headland.orderBefore), vehicle.cp.headland.orderBefore and 1 or 2), 7);
+	-- courseplay:debug(string.format('toggleHeadlandOrder(): orderBefore=%s -> set to %q, setOverlay(orderButton, %d)', tostring(not vehicle.cp.headland.orderBefore), tostring(vehicle.cp.headland.orderBefore), vehicle.cp.headland.orderBefore and 1 or 2), courseplay.DBG_COURSES);
 end;
 
 function courseplay:changeIslandBypassMode(vehicle)
@@ -824,25 +831,25 @@ function courseplay:validateCourseGenerationData(vehicle)
 	end;
 	--courseplay.buttons:setActiveEnabled(vehicle, 'generateCourse');
 
-	if courseplay.debugChannels[7] then
-		courseplay:debug(string.format("%s: hasGeneratedCourse=%s, hasEnoughWaypoints=%s, hasStartingCorner=%s, hasStartingDirection=%s, numCourses=%s, fieldEdge.selectedField.fieldNum=%s ==> hasValidCourseGenerationData=%s", nameNum(vehicle), tostring(vehicle.cp.hasGeneratedCourse), tostring(hasEnoughWaypoints), tostring(vehicle.cp.hasStartingCorner), tostring(vehicle.cp.hasStartingDirection), tostring(vehicle.cp.numCourses), tostring(vehicle.cp.fieldEdge.selectedField.fieldNum), tostring(vehicle.cp.hasValidCourseGenerationData)), 7);
-	end;
+	courseplay:debug(string.format("%s: hasGeneratedCourse=%s, hasEnoughWaypoints=%s, hasStartingCorner=%s, hasStartingDirection=%s, numCourses=%s, fieldEdge.selectedField.fieldNum=%s ==> hasValidCourseGenerationData=%s",
+		nameNum(vehicle), tostring(vehicle.cp.hasGeneratedCourse), tostring(hasEnoughWaypoints), tostring(vehicle.cp.hasStartingCorner), tostring(vehicle.cp.hasStartingDirection), tostring(vehicle.cp.numCourses), tostring(vehicle.cp.fieldEdge.selectedField.fieldNum), tostring(vehicle.cp.hasValidCourseGenerationData)), courseplay.DBG_COURSES);
 end;
 
 function courseplay:validateCanSwitchMode(vehicle)
-	vehicle:setCpVar('canSwitchMode', not vehicle:getIsCourseplayDriving() and not vehicle.cp.isRecording and not vehicle.cp.recordingIsPaused and not vehicle.cp.fieldEdge.customField.isCreated,courseplay.isClient);
-	if courseplay.debugChannels[12] then
-		courseplay:debug(('%s: validateCanSwitchMode(): isDriving=%s, isRecording=%s, recordingIsPaused=%s, customField.isCreated=%s ==> canSwitchMode=%s'):format(nameNum(vehicle), tostring(vehicle:getIsCourseplayDriving()), tostring(vehicle.cp.isRecording), tostring(vehicle.cp.recordingIsPaused), tostring(vehicle.cp.fieldEdge.customField.isCreated), tostring(vehicle.cp.canSwitchMode)), 12);
-	end;
+	vehicle:setCpVar('canSwitchMode', not vehicle:getIsCourseplayDriving() and not vehicle.cp.isRecording and
+		not vehicle.cp.recordingIsPaused and not vehicle.cp.fieldEdge.customField.isCreated,courseplay.isClient);
+	courseplay:debug(('%s: validateCanSwitchMode(): isDriving=%s, isRecording=%s, recordingIsPaused=%s, customField.isCreated=%s ==> canSwitchMode=%s'):format(
+		nameNum(vehicle), tostring(vehicle:getIsCourseplayDriving()), tostring(vehicle.cp.isRecording),
+		tostring(vehicle.cp.recordingIsPaused), tostring(vehicle.cp.fieldEdge.customField.isCreated), tostring(vehicle.cp.canSwitchMode)), courseplay.DBG_UNCATEGORIZED);
 end;
 
 function courseplay:reloadCoursesFromXML(vehicle)
-	courseplay:debug("reloadCoursesFromXML()", 8);
+	courseplay:debug("reloadCoursesFromXML()", courseplay.DBG_COURSES);
 	if g_server ~= nil then
 		courseplay.courses:loadCoursesAndFoldersFromXml();
 
-		--courseplay:debug(tableShow(g_currentMission.cp_courses, "g_cM cp_courses", 8), 8);
-		courseplay:debug("g_currentMission.cp_courses = courseplay.courses:loadCoursesAndFoldersFromXml()", 8);
+		--courseplay:debug(tableShow(g_currentMission.cp_courses, "g_cM cp_courses", 8), courseplay.DBG_COURSES);
+		courseplay:debug("g_currentMission.cp_courses = courseplay.courses:loadCoursesAndFoldersFromXml()", courseplay.DBG_COURSES);
 		if not vehicle:getIsCourseplayDriving() then
 			local loadedCoursesBackup = vehicle.cp.loadedCourses;
 			courseplay:clearCurrentLoadedCourse(vehicle);
@@ -1091,7 +1098,7 @@ end;
 
 function courseplay:setSlippingStage(vehicle, stage)
 	if vehicle.cp.slippingStage ~= stage then
-		courseplay:debug(('%s: setSlippingStage(..., %d)'):format(nameNum(vehicle), stage), 14);
+		courseplay:debug(('%s: setSlippingStage(..., %d)'):format(nameNum(vehicle), stage), courseplay.DBG_AI_DRIVER);
 		vehicle.cp.slippingStage = stage;
 	end;
 end;
@@ -1110,23 +1117,23 @@ function courseplay:setCpVar(varName, value, noEventSend)
 			self.cp[varName] = value;		
 			if CpManager.isMP and not noEventSend then
 				--print(courseplay.utils:getFnCallPath(2))
-				courseplay:debug(string.format("setCpVar: %s: %s -> send Event",varName,tostring(value)), 5);
+				courseplay:debug(string.format("setCpVar: %s: %s -> send Event",varName,tostring(value)), courseplay.DBG_MULTIPLAYER);
 				CourseplayEvent.sendEvent(self, "self.cp."..varName, value)
 			end
 			if varName == "isDriving" then
-				courseplay:debug("reload page 1", 5);
+				courseplay:debug("reload page 1", courseplay.DBG_MULTIPLAYER);
 				courseplay.hud:setReloadPageOrder(self, 1, true);
 			elseif varName:sub(1, 3) == 'HUD' then
 				-- TODO: using the variable name to trigger a HUD refresh is not a good idea.
 				--print('broken settings 1860')
 				if StringUtil.startsWith(varName, 'HUD0') then
-					courseplay:debug("reload page 0", 5);
+					courseplay:debug("reload page 0", courseplay.DBG_MULTIPLAYER);
 					courseplay.hud:setReloadPageOrder(self, 0, true);
 				elseif StringUtil.startsWith(varName, 'HUD1') then
-					courseplay:debug("reload page 1", 5);
+					courseplay:debug("reload page 1", courseplay.DBG_MULTIPLAYER);
 					courseplay.hud:setReloadPageOrder(self, 1, true);
 				elseif StringUtil.startsWith(varName, 'HUD4') then
-					courseplay:debug("reload page 4", 5);
+					courseplay:debug("reload page 4", courseplay.DBG_MULTIPLAYER);
 					courseplay.hud:setReloadPageOrder(self, 4, true);
 				end;
 			elseif varName == 'waypointIndex' and self.cp.hud.currentPage == courseplay.hud.PAGE_CP_CONTROL and (self.cp.isRecording or self.cp.recordingIsPaused) and value and value == 4 then -- record pause action becomes available
@@ -1140,7 +1147,7 @@ function courseplay:setCpVar(varName, value, noEventSend)
 		-- TODO: this is unclear, shouldn't this be only called when the value changed?
 		if CpManager.isMP and not noEventSend then
 			--print(courseplay.utils:getFnCallPath(2))
-			courseplay:debug(string.format("setCpVar: %s: %s -> send Event",varName,tostring(value)), 5);
+			courseplay:debug(string.format("setCpVar: %s: %s -> send Event",varName,tostring(value)), courseplay.DBG_MULTIPLAYER);
 			CourseplayEvent.sendEvent(self, "self.cp."..varName, value)
 		end
 	end
@@ -1757,7 +1764,7 @@ function AutoDriveModeSetting:init(vehicle)
 end
 
 function AutoDriveModeSetting:next()
-	courseplay.debugVehicle(12, vehicle, 'AutoDrive mode: %d', vehicle.cp.settings.autoDriveMode:get())
+	courseplay.debugVehicle(courseplay.DBG_UNCATEGORIZED, self.vehicle, 'AutoDrive mode: %d', self.vehicle.cp.settings.autoDriveMode:get())
 	SettingList.next(self)
 end
 
@@ -1796,6 +1803,10 @@ function AutoDriveModeSetting:useForParkVehicle()
 	return self:is(AutoDriveModeSetting.PARK) or self:is(AutoDriveModeSetting.UNLOAD_OR_REFILL_PARK)
 end
 
+function AutoDriveModeSetting:isDisabled()
+	return not self.vehicle.cp.canDrive or not self.vehicle.spec_autodrive
+end
+
 --- Starting point setting (at which waypoint should the vehicle start the course)
 ---@class StartingPointSetting : SettingList
 StartingPointSetting = CpObject(SettingList)
@@ -1805,35 +1816,64 @@ StartingPointSetting.START_AT_FIRST_POINT   = 2 -- first waypoint
 StartingPointSetting.START_AT_CURRENT_POINT = 3 -- current waypoint
 StartingPointSetting.START_AT_NEXT_POINT    = 4 -- nearest waypoint with approximately same direction as vehicle
 StartingPointSetting.START_WITH_UNLOAD      = 5 -- start with unloading the combine (only for CombineUnloadAIDriver)
+StartingPointSetting.START_COLLECTING_BALES = 6 -- start with unloading the combine (only for CombineUnloadAIDriver)
 
 function StartingPointSetting:init(vehicle)
-	SettingList.init(self, 'startingPoint', 'COURSEPLAY_START_AT_POINT', 'COURSEPLAY_START_AT_POINT', vehicle,
-			{
-		        StartingPointSetting.START_AT_NEAREST_POINT,
-				StartingPointSetting.START_AT_FIRST_POINT  ,
-				StartingPointSetting.START_AT_CURRENT_POINT,
-				StartingPointSetting.START_AT_NEXT_POINT,
-				StartingPointSetting.START_WITH_UNLOAD
-			},
-			{
-				"COURSEPLAY_NEAREST_POINT",
-				"COURSEPLAY_FIRST_POINT"  ,
-				"COURSEPLAY_CURRENT_POINT",
-				"COURSEPLAY_NEXT_POINT",
-				"COURSEPLAY_UNLOAD"
-			})
+	local values, texts = self:getValuesForMode(vehicle.cp.mode)
+	SettingList.init(self, 'startingPoint',
+		'COURSEPLAY_START_AT_POINT', 'COURSEPLAY_START_AT_POINT', vehicle, values, texts)
+end
+
+-- TODO: this should probably part of the specific driver mode?
+function StartingPointSetting:getValuesForMode(mode)
+	if mode == courseplay.MODE_COMBI or mode == courseplay.MODE_OVERLOADER then
+		return {
+			StartingPointSetting.START_AT_NEAREST_POINT,
+			StartingPointSetting.START_AT_FIRST_POINT  ,
+			StartingPointSetting.START_AT_CURRENT_POINT,
+			StartingPointSetting.START_AT_NEXT_POINT,
+			StartingPointSetting.START_WITH_UNLOAD
+		},
+		{
+			"COURSEPLAY_NEAREST_POINT",
+			"COURSEPLAY_FIRST_POINT"  ,
+			"COURSEPLAY_CURRENT_POINT",
+			"COURSEPLAY_NEXT_POINT",
+			"COURSEPLAY_UNLOAD",
+		}
+	elseif mode == courseplay.MODE_BALE_COLLECTOR then
+		return {
+			StartingPointSetting.START_AT_NEAREST_POINT,
+			StartingPointSetting.START_AT_FIRST_POINT  ,
+			StartingPointSetting.START_AT_NEXT_POINT,
+			StartingPointSetting.START_COLLECTING_BALES
+		},
+		{
+			"COURSEPLAY_NEAREST_POINT",
+			"COURSEPLAY_FIRST_POINT"  ,
+			"COURSEPLAY_NEXT_POINT",
+			"COURSEPLAY_COLLECT_BALES",
+		}
+	else
+		return {
+			StartingPointSetting.START_AT_NEAREST_POINT,
+			StartingPointSetting.START_AT_FIRST_POINT  ,
+			StartingPointSetting.START_AT_CURRENT_POINT,
+			StartingPointSetting.START_AT_NEXT_POINT,
+		},
+		{
+			"COURSEPLAY_NEAREST_POINT",
+			"COURSEPLAY_FIRST_POINT"  ,
+			"COURSEPLAY_CURRENT_POINT",
+			"COURSEPLAY_NEXT_POINT",
+		}
+	end
 end
 
 function StartingPointSetting:checkAndSetValidValue(new)
-	-- enable unload only for CombineUnloadAIDriver/Overloader
-	if self.vehicle.cp.driver and
-			self.vehicle.cp.mode ~= courseplay.MODE_COMBI and
-			self.vehicle.cp.mode ~= courseplay.MODE_OVERLOADER and
-			self.values[new] == StartingPointSetting.START_WITH_UNLOAD then
-		return 1
-	else
-		return SettingList.checkAndSetValidValue(self, new)
-	end
+	-- make sure we always have a valid set for the current mode
+	self.values, self.texts = self:getValuesForMode(self.vehicle.cp.mode)
+	return SettingList.checkAndSetValidValue(self, new)
 end
 
 ---@class StartingLocationSetting : SettingList
@@ -2052,6 +2092,10 @@ function ReturnToFirstPointSetting:init(vehicle)
 		})
 end
 
+function ReturnToFirstPointSetting:isDisabled()
+	return not self.vehicle.cp.canDrive or self.vehicle.cp.mode == courseplay.MODE_BALE_COLLECTOR
+end
+
 function ReturnToFirstPointSetting:isReturnToStartActive()
 	return self:get() == self.RETURN_TO_START or self:get() == self.RETURN_TO_START_AND_RELEASE_DRIVER
 end
@@ -2118,10 +2162,9 @@ end
 --- Setting to select a field
 ---@class FieldNumberSetting : SettingList
 FieldNumberSetting = CpObject(SettingList)
-function FieldNumberSetting:init(vehicle)
+function FieldNumberSetting:init(name, label, toolTip, vehicle)
 	local values, texts = self:loadFields()
-	SettingList.init(self, 'fieldNumbers', 'COURSEPLAY_FIELD', 'COURSEPLAY_FIELD',
-		vehicle, values, texts)
+	SettingList.init(self, name, label, toolTip, vehicle, values, texts)
 end
 
 function FieldNumberSetting:loadFields()
@@ -2129,10 +2172,13 @@ function FieldNumberSetting:loadFields()
 	local texts = {}
 	for fieldNumber, _ in pairs( courseplay.fields.fieldData ) do
 		table.insert(values, fieldNumber)
-		table.insert(texts, fieldNumber)
 	end
+	-- numeric sort first
 	table.sort( values, function( a, b ) return a < b end )
-	table.sort( texts, function( a, b ) return a < b end )
+	-- then convert to text
+	for _, fieldNumber in ipairs(values) do
+		table.insert(texts, tostring(fieldNumber))
+	end
 	return values, texts
 end
 
@@ -2148,16 +2194,40 @@ function FieldNumberSetting:refresh()
 	self.current = math.min(self.current, #self.values)
 end
 
+-- see above, refresh in case it was not initialized
+function FieldNumberSetting:get()
+	if #self.values == 0 then
+		self:refresh()
+	end
+	return SettingList.get(self)
+end
+
+-- see above, refresh in case it was not initialized
+function FieldNumberSetting:getText()
+	if #self.values == 0 then
+		self:refresh()
+	end
+	return SettingList.getText(self)
+end
+
+function FieldNumberSetting:changeByX(x)
+	self:refresh()
+	SettingList.changeByX(self, x)
+end
+
+--- Field to collect the bales from
+---@class BaleCollectionFieldSetting : FieldNumberSetting
+BaleCollectionFieldSetting = CpObject(FieldNumberSetting)
+function BaleCollectionFieldSetting:init(vehicle)
+	FieldNumberSetting.init(self, 'baleCollectionField', 'COURSEPLAY_FIELD', 'COURSEPLAY_FIELD', vehicle)
+end
+
 --- Search combine on field
 ---@class SearchCombineOnFieldSetting : FieldNumberSetting
 SearchCombineOnFieldSetting = CpObject(FieldNumberSetting)
 function SearchCombineOnFieldSetting:init(vehicle)
-	FieldNumberSetting.init(self, vehicle)
-	self.name = 'searchCombineOnField'
-	self.label = 'COURSEPLAY_SEARCH_COMBINE_ON_FIELD'
-	self.tooltip = 'COURSEPLAY_SEARCH_COMBINE_ON_FIELD'
-	self.xmlKey = 'searchCombineOnField'
-	self.xmlAttribute = '#fieldNumber'
+	FieldNumberSetting.init(self, 'searchCombineOnField',
+		'COURSEPLAY_SEARCH_COMBINE_ON_FIELD', 'COURSEPLAY_SEARCH_COMBINE_ON_FIELD', vehicle)
 	self:addNoneSelected()
 end
 
@@ -2187,7 +2257,6 @@ end
 SelectedCombineToUnloadSetting = CpObject(SettingList)
 
 function SelectedCombineToUnloadSetting:init()
-	print("SelectedCombineToUnloadSetting:init()")
 	self.name = 'selectedCombineToUnload'
 	self.label = 'COURSEPLAY_SEARCH_COMBINE_ON_FIELD'
 	self.tooltip = 'COURSEPLAY_SEARCH_COMBINE_ON_FIELD'
@@ -2371,7 +2440,11 @@ end
 StopAtEndSetting = CpObject(BooleanSetting)
 function StopAtEndSetting:init(vehicle)
 	BooleanSetting.init(self, 'stopAtEnd', 'COURSEPLAY_STOP_AT_LAST_POINT', 'COURSEPLAY_STOP_AT_LAST_POINT', vehicle)
-	self:set(false)
+	self:set(true)
+end
+
+function StopAtEndSetting:isDisabled()
+	return not self.vehicle.cp.canDrive or not self.vehicle.cp.mode == courseplay.MODE_TRANSPORT
 end
 
 ---@class AutomaticCoverHandlingSetting : BooleanSetting
@@ -2379,14 +2452,6 @@ AutomaticCoverHandlingSetting = CpObject(BooleanSetting)
 function AutomaticCoverHandlingSetting:init(vehicle)
 	BooleanSetting.init(self, 'automaticCoverHandling', 'COURSEPLAY_COVER_HANDLING', 'COURSEPLAY_COVER_HANDLING', vehicle)
 	self:set(true)
-end
-
---no Function!!
----@class AutomaticUnloadingOnFieldSetting : BooleanSetting
-AutomaticUnloadingOnFieldSetting = CpObject(BooleanSetting)
-function AutomaticUnloadingOnFieldSetting:init(vehicle)
-	BooleanSetting.init(self, 'automaticUnloadingOnField', 'COURSEPLAY_UNLOADING_ON_FIELD', 'COURSEPLAY_UNLOADING_ON_FIELD',vehicle, {'COURSEPLAY_MANUAL','COURSEPLAY_AUTOMATIC'})
-	self:set(false)
 end
 
 ---@class DriverPriorityUseFillLevelSetting : BooleanSetting
@@ -2427,146 +2492,6 @@ function WarningLightsModeSetting:init(vehicle)
 		)
 	self:set(1)
 end
-
----@class ShowMapHotspotSetting : SettingList
-ShowMapHotspotSetting = CpObject(SettingList)
-ShowMapHotspotSetting.DEACTIVED = 0;
-ShowMapHotspotSetting.NAME_ONLY = 1;
-ShowMapHotspotSetting.NAME_AND_COURSE = 2;
-
-function ShowMapHotspotSetting:init(vehicle)
-	SettingList.init(self, 'showMapHotspot', 'COURSEPLAY_INGAMEMAP_ICONS_SHOWTEXT', 'COURSEPLAY_INGAMEMAP_ICONS_SHOWTEXT', vehicle,
-		{ 
-			ShowMapHotspotSetting.DEACTIVED,
-			ShowMapHotspotSetting.NAME_ONLY,
-			ShowMapHotspotSetting.NAME_AND_COURSE
-		},
-		{ 	
-			'COURSEPLAY_DEACTIVATED',
-			'COURSEPLAY_NAME_ONLY',
-			'COURSEPLAY_NAME_AND_COURSE'
-		}
-		)
-	self:set(2)
-	self.mapHotspot=nil
-end
-
-function ShowMapHotspotSetting:onChange()
-	--TODO get the other components in here ??
-	for _,vehicle in pairs(CpManager.activeCoursePlayers) do
-		local showMapHotspot = vehicle.cp.settings.showMapHotspot
-		if showMapHotspot and showMapHotspot:getMapHotspot() then
-			showMapHotspot:getMapHotspot():setText('CP\n' .. showMapHotspot:getMapHotspotText(vehicle))
-			courseplay.hud:setReloadPageOrder(vehicle, 7, true)
-		end
-	end
-end
-
-function ShowMapHotspotSetting:getMapHotspot()
-	return self.mapHotspot
-end
-
-function ShowMapHotspotSetting:deleteMapHotspot()
-	if self.mapHotspot then
-		g_currentMission:removeMapHotspot(self.mapHotspot)
-		self.mapHotspot:delete()
-		self.mapHotspot = nil
-	end
-end
-
-function ShowMapHotspotSetting:getMapHotspotText(vehicle)
-	local text = '';
-	if vehicle.cp.settings.showMapHotspot:is(ShowMapHotspotSetting.NAME_ONLY) then 
-		text = nameNum(vehicle, true) .. '\n';
-	elseif vehicle.cp.settings.showMapHotspot:is(ShowMapHotspotSetting.NAME_AND_COURSE) then
-		text = nameNum(vehicle, true) .. '\n';
-		text = text .. ('(%s)'):format(vehicle.cp.currentCourseName or courseplay:loc('COURSEPLAY_TEMP_COURSE'));
-	end
-	return text
-end
-
-function ShowMapHotspotSetting:createMapHotspot()
-	if self.vehicle.cp.mode == courseplay.MODE_COMBINE_SELF_UNLOADING then
-		return
-	end
-	--[[
-	local hotspotX, _, hotspotZ = getWorldTranslation(vehicle.rootNode);
-	local _, textSize = getNormalizedScreenValues(0, 6);
-	local _, textOffsetY = getNormalizedScreenValues(0, 9.5);
-	local width, height = getNormalizedScreenValues(11,11);
-]]	local helperName = self.vehicle.currentHelper and self.vehicle.currentHelper.name or ".."
-	local hotspotX, _, hotspotZ = getWorldTranslation(self.vehicle.rootNode)
-	local _, textSize = getNormalizedScreenValues(0, 9)
-	local _, textOffsetY = getNormalizedScreenValues(0, 18)
-	local width, height = getNormalizedScreenValues(24, 24)
-	self.mapHotspot = MapHotspot:new("cpHelper", MapHotspot.CATEGORY_AI)
-	self.mapHotspot:setSize(width, height)
-	self.mapHotspot:setLinkedNode(self.vehicle.components[1].node)											-- objectId to what the hotspot is attached to
-	self.mapHotspot:setText(string.format('CP(%s)\n%s', tostring(helperName),self:getMapHotspotText(self.vehicle)))
-	self.mapHotspot:setImage(nil, getNormalizedUVs(MapHotspot.UV.HELPER), {0.052, 0.1248, 0.672, 1})
-	self.mapHotspot:setBackgroundImage(nil, getNormalizedUVs(MapHotspot.UV.HELPER))
-	self.mapHotspot:setIconScale(0.7)
-	self.mapHotspot:setTextOptions(textSize, nil, textOffsetY, {1, 1, 1, 1}, Overlay.ALIGN_VERTICAL_MIDDLE)
-	self.mapHotspot:setColor(Utils.getNoNil(courseplay.hud.ingameMapIconsUVs[self.vehicle.cp.mode], courseplay.hud.ingameMapIconsUVs[courseplay.MODE_GRAIN_TRANSPORT]))
-	g_currentMission:addMapHotspot(self.mapHotspot)
-
-
-	--[[ FS17 doc, left here for later reference only
-		"cpHelper",                                 -- name: 				mapHotspot Name
-		"CP\n"..name,                               -- fullName: 			Text shown in icon
-		nil,                                        -- imageFilename:		Image path for custome images (If nil, then it will use Giants default image file)
-		getNormalizedUVs({768, 768, 256, 256}),     -- imageUVs:			UVs location of the icon in the image file. Use getNormalizedUVs to get an correct UVs array
-		colour,                                     -- baseColor:			What colour to show
-		hotspotX,                                   -- xMapPos:				x position of the hotspot on the map
-		hotspotZ,                                   -- zMapPos:				z position of the hotspot on the map
-		width,                                      -- width:				Image width
-		height,                                     -- height:				Image height
-		false,                                      -- blinking:			If the hotspot is blinking (Like the icons do, when a great demands is active)
-		false,                                      -- persistent:			Do the icon needs to be shown even when outside map ares (Like Greatdemands are shown at the minimap edge if outside the minimap)
-		true,                                       -- showName:			Should we show the fullName or not.
-		vehicle.components[1].node,                 -- objectId:			objectId to what the hotspot is attached to
-		true,                                       -- renderLast:			Does this need to be renderes as one of the last icons
-		MapHotspot.CATEGORY_VEHICLE_STEERABLE,      -- category:			The MapHotspot category.
-		textSize,                                   -- textSize:			fullName text size. you can use getNormalizedScreenValues(x, y) to get the normalized text size by using the return value of the y.
-		textOffsetY,                                -- textOffsetY:			Text offset horizontal
-		{1, 1, 1, 1},                               -- textColor:			Text colour (r, g, b, a) in 0-1 format
-		nil,                                        -- bgImageFilename:		Image path for custome background images (If nil, then it will use Giants default image file)
-		getNormalizedUVs({768, 768, 256, 256}),     -- bgImageUVs:			UVs location of the background icon in the image file. Use getNormalizedUVs to get an correct UVs array
-		Overlay.ALIGN_VERTICAL_MIDDLE,              -- verticalAlignment:	The alignment of the image based on the attached node
-		0.8                                         -- overlayBgScale:		Background icon scale, like making an border. (smaller is bigger border)
-	) ]]
-end
-
-
-function ShowMapHotspotSetting:onWriteStream(stream)
-	SettingList.onWriteStream(self,stream)
-	if self.mapHotspot~=nil then 
-		streamWriteBool(stream,true)
-		if self.vehicle.currentHelper and self.vehicle.currentHelper.index ~= nil then 
-			streamWriteBool(stream,true)
-			streamWriteUInt8(stream, self.vehicle.currentHelper.index)
-		else 
-			streamWriteBool(stream,false)
-		end
-	else 
-		streamWriteBool(stream,false)
-	end
-end
-
-function ShowMapHotspotSetting:onReadStream(stream)
-	SettingList.onReadStream(self,stream)
-	if streamReadBool(stream) then
-		if streamReadBool(stream) then
-			local helperIndex = streamReadUInt8(stream)
-			self.vehicle.currentHelper = g_helperManager:getHelperByIndex(helperIndex)
-		end
-		--add to activeCoursePlayers
-		CpManager:addToActiveCoursePlayers(self.vehicle)	
-		-- add ingameMap icon
-		self:createMapHotspot();
-	end
-end
-
 
 ---@class SaveFuelOptionSetting : BooleanSetting
 SaveFuelOptionSetting = CpObject(BooleanSetting)
@@ -2702,7 +2627,7 @@ end
 function SiloSelectedFillTypeSetting:cleanUpOldFillTypes(noEventSend)
 	local supportedFillTypes = {}
 	self:getSupportedFillTypes(self.vehicle,supportedFillTypes)
-	self:checkSelectedFillTypes(supportedFillTypes,true)
+	self:checkSelectedFillTypes(supportedFillTypes,true, noEventSend)
 	if not noEventSend then
 		self:sendEvent(self.NetworkTypes.CLEANUP_OLD_FILLTYPES)
 	end
@@ -2713,14 +2638,14 @@ function SiloSelectedFillTypeSetting:validateCurrentValue()
 end
 
 
-function SiloSelectedFillTypeSetting:checkSelectedFillTypes(supportedFillTypes,cleanUp)
+function SiloSelectedFillTypeSetting:checkSelectedFillTypes(supportedFillTypes, cleanUp, noEventSend)
 	totalData = self:getData()
 	for index,data in ipairs(totalData) do 
 		if supportedFillTypes[data.fillType] then --already selected fillTypes disable multi select
 			supportedFillTypes[data.fillType]=0
 		elseif cleanUp then	--delete not supported fillTypes 
-			self:deleteByIndex(index) 
-			return self:checkSelectedFillTypes(supportedFillTypes,cleanUp)
+			self:deleteByIndex(index, noEventSend)
+			return self:checkSelectedFillTypes(supportedFillTypes, cleanUp, noEventSend)
 		end
 	end
 end 
@@ -2939,7 +2864,7 @@ function SiloSelectedFillTypeSetting:moveDownByIndex(index,noEventSend)
 	end
 end
 
-function SiloSelectedFillTypeSetting:deleteByIndex(index,noEventSend)
+function SiloSelectedFillTypeSetting:deleteByIndex(index, noEventSend)
 	LinkedListSetting.deleteByIndex(self,index)
 	if not noEventSend then
 		self:sendEvent(self.NetworkTypes.DELETE_X,index)
@@ -3025,13 +2950,6 @@ TurnOnFieldSetting = CpObject(BooleanSetting)
 function TurnOnFieldSetting:init(vehicle)
 	BooleanSetting.init(self, 'turnOnField','COURSEPLAY_TURN_ON_FIELD', 'COURSEPLAY_TURN_ON_FIELD', vehicle) 
 	self:set(true)
-end
-
----@class TurnStageSetting : BooleanSetting
-TurnStageSetting = CpObject(BooleanSetting)
-function TurnStageSetting:init(vehicle)
-	BooleanSetting.init(self, 'turnStage','COURSEPLAY_TURN_MANEUVER', 'COURSEPLAY_TURN_MANEUVER', vehicle, {'COURSEPLAY_START','COURSEPLAY_FINISH'}) 
-	self:set(false)
 end
 
 ---@class RefillUntilPctSetting : PercentageSettingList
@@ -4086,7 +4004,7 @@ function SettingsContainer:validateSetting(setting)
 end
 
 function SettingsContainer.createGlobalSettings()
-	container = SettingsContainer("globalSettings")
+	local container = SettingsContainer("globalSettings")
 	container:addSetting(LoadCoursesAtStartupSetting)
 	container:addSetting(AutoFieldScanSetting)
 	container:addSetting(WorkerWagesSetting)
@@ -4094,6 +4012,7 @@ function SettingsContainer.createGlobalSettings()
 	container:addSetting(ShowMiniHudSetting)
 	container:addSetting(EnableOpenHudWithMouseGlobalSetting)
 	container:addSetting(AutoRepairSetting)
+	container:addSetting(ShowMapHotspotSetting)
 	return container
 end
 
@@ -4138,18 +4057,16 @@ function SettingsContainer.createVehicleSpecificSettings(vehicle)
 	container:addSetting(EnableVisualWaypointsTemporary, vehicle)
 	container:addSetting(StopAtEndSetting, vehicle)
 	container:addSetting(AutomaticCoverHandlingSetting, vehicle)
-	container:addSetting(AutomaticUnloadingOnFieldSetting, vehicle)
+	container:addSetting(BaleCollectionFieldSetting, vehicle)
 	container:addSetting(DriverPriorityUseFillLevelSetting, vehicle)
 	container:addSetting(UseRecordingSpeedSetting, vehicle)
 	container:addSetting(WarningLightsModeSetting, vehicle)
-	container:addSetting(ShowMapHotspotSetting, vehicle)
 	container:addSetting(SaveFuelOptionSetting, vehicle)
 	container:addSetting(AlwaysSearchFuelSetting, vehicle)
 	container:addSetting(RealisticDrivingSetting, vehicle)
 	container:addSetting(DriveUnloadNowSetting, vehicle)
 	container:addSetting(CombineWantsCourseplayerSetting, vehicle)
 	container:addSetting(TurnOnFieldSetting, vehicle)
-	container:addSetting(TurnStageSetting, vehicle)
 	container:addSetting(GrainTransportDriver_SiloSelectedFillTypeSetting, vehicle)
 	container:addSetting(FillableFieldWorkDriver_SiloSelectedFillTypeSetting, vehicle)
 	container:addSetting(FieldSupplyDriver_SiloSelectedFillTypeSetting, vehicle)

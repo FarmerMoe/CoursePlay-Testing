@@ -84,19 +84,19 @@ end
 ---checks if the "mode" is allowed and not disallowed for the vehicle
 ---@param int : cpMode to check
 ---@param vehicle : object, implement,vehicle
----@return boolean : isAllowedOkay, boolean : isDisallowedOkay
+---@return boolean, boolean : true = setup allows this mode, true = setup does not disable this mode
 function ValidModeSetupHandler:isModeValid(mode,object)
 	local validData = self.modeSetup[mode]
-	local isAllowedOkay = false
+	local isAllowedOkay = true
 	local isDisallowedOkay = true
 	if validData then 
 		if validData.allowedSetups then 
 			isAllowedOkay = self:isSetupAllowedValid(validData.allowedSetups,object)
-			courseplay.debugVehicle(18,object,"allowedSetups, mode: %d, isAllowedOkay: %s",mode,tostring(isAllowedOkay))
+			courseplay.debugVehicle(courseplay.DBG_HUD,object,"allowedSetups, mode: %d, isAllowedOkay: %s",mode,tostring(isAllowedOkay))
 		end
 		if validData.disallowedSetups then 
 			isDisallowedOkay = self:isSetupDisallowedValid(validData.disallowedSetups,object)
-			courseplay.debugVehicle(18,object,"disallowedSetup, mode: %d,, isDisallowedOkay: %s",mode,tostring(isDisallowedOkay))
+			courseplay.debugVehicle(courseplay.DBG_HUD,object,"disallowedSetup, mode: %d,, isDisallowedOkay: %s",mode,tostring(isDisallowedOkay))
 		end
 	else 
 		courseplay.info("ValidModeSetupHandler, validData==nil !!")

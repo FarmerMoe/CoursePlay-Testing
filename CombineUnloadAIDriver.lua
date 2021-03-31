@@ -115,10 +115,10 @@ CombineUnloadAIDriver.myStates = {
 
 --- Constructor
 function CombineUnloadAIDriver:init(vehicle)
-	courseplay.debugVehicle(11,vehicle,'CombineUnloadAIDriver:init()')
+	courseplay.debugVehicle(courseplay.DBG_AI_DRIVER,vehicle,'CombineUnloadAIDriver:init()')
 	self.assignedCombinesSetting = AssignedCombinesSetting(vehicle)
 	AIDriver.init(self, vehicle)
-	self.debugChannel = 4
+	self.debugChannel = courseplay.DBG_MODE_2
 	self.mode = courseplay.MODE_COMBI
 	self:initStates(CombineUnloadAIDriver.myStates)
 	self.combineOffset = 0
@@ -504,7 +504,7 @@ function CombineUnloadAIDriver:driveBesideCombine()
 	local factor = self.combineToUnload.cp.driver:isDischarging() and 0.5 or 2
 	local speed = self.combineToUnload.lastSpeedReal * 3600 + MathUtil.clamp(-dz * factor, -10, 15)
 
-  	-- slow down while the pipe is unfoling to avoid crashing onto it
+  	-- slow down while the pipe is unfolding to avoid crashing onto it
 	if self.combineToUnload.cp.driver:isPipeMoving() then
 		speed = (math.min(speed, self.combineToUnload:getLastSpeed() + 2))
     end
@@ -607,17 +607,6 @@ function CombineUnloadAIDriver:getCourseToAlignTo(vehicle,offset)
 	end
 	local tempCourse = Course(self.vehicle,waypoints)
 	return tempCourse
-end
-
-function CombineUnloadAIDriver:getStraightForwardCourse(length)
-	local l = length or 100
-	return Course.createFromNode(self.vehicle, self.vehicle.rootNode, 0, 0, l, 5, false)
-end
-
-function CombineUnloadAIDriver:getStraightReverseCourse(length)
-	local lastTrailer = AIDriverUtil.getLastAttachedImplement(self.vehicle)
-	local l = length or 100
-	return Course.createFromNode(self.vehicle, lastTrailer.rootNode, 0, 0, -l, -5, true)
 end
 
 function CombineUnloadAIDriver:getTrailersTargetNode()
@@ -1626,25 +1615,6 @@ function CombineUnloadAIDriver:getDistanceFromCombine(combine)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
--- Can drive beside combine?
--- Other code will take care of using the correct offset, all we want to know here is
--- if we can drive under the pipe, regardless of which side it is on
-------------------------------------------------------------------------------------------------------------------------
-function CombineUnloadAIDriver:canDriveBesideCombine(combine)
-	-- no fruit avoidance, don't care
-	if self.vehicle.cp.settings.useRealisticDriving:is(false) then return true end
-	-- TODO: or just use combine:pipeInFruit() instead?
-	local leftOk, rightOk = g_combineUnloadManager:getPossibleSidesToDrive(combine)
-	if leftOk and combine.cp.driver:isPipeOnLeft() then
-		return true
-	elseif rightOk and not combine.cp.driver:isPipeOnLeft() then
-		return true
-	else
-		return false
-	end
-end
-
-------------------------------------------------------------------------------------------------------------------------
 -- Update combine status
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:updateCombineStatus()
@@ -1703,17 +1673,26 @@ function CombineUnloadAIDriver:changeToUnloadWhenFull()
 	end
 	return false
 end
+
+function CombineUnloadAIDriver:checkForCombineProximity()
+	-- do not swerve for our combine towards the end of the course,
+	-- otherwise we won't be able to align with it when coming from
+	-- the wrong angle
+	if self.course:getDistanceToLastWaypoint(self.course:getCurrentWaypointIx()) < 20 then
+		if not self.doNotSwerveForVehicle:get() then
+			self:debug('Disable swerve for %s', nameNum(self.combineToUnload))
+		end
+		self.doNotSwerveForVehicle:set(self.combineToUnload, 2000)
+	end
+
+end
+
 ------------------------------------------------------------------------------------------------------------------------
 -- Drive to stopped combine
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:driveToCombine()
 
-	-- do not swerve for our combine towards the end of the course,
-	-- otherwise we won't be able to align with it when coming from
-	-- the wrong angle
-	if self.course:getDistanceToLastWaypoint(self.course:getCurrentWaypointIx()) < 20 then
-		self.doNotSwerveForVehicle:set(self.combineToUnload, 2000)
-	end
+	self:checkForCombineProximity()
 
 	courseplay:setInfoText(self.vehicle, "COURSEPLAY_DRIVE_TO_COMBINE");
 
@@ -1730,12 +1709,8 @@ end
 -- Drive to moving combine
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:driveToMovingCombine()
-	-- do not swerve for our combine towards the end of the course,
-	-- otherwise we won't be able to align with it when coming from
-	-- the wrong angle
-	if self.course:getDistanceToLastWaypoint(self.course:getCurrentWaypointIx()) < 20 then
-		self.doNotSwerveForVehicle:set(self.combineToUnload, 2000)
-	end
+
+	self:checkForCombineProximity()
 
 	courseplay:setInfoText(self.vehicle, "COURSEPLAY_DRIVE_TO_COMBINE");
 
@@ -1829,10 +1804,7 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 
 	if self:changeToUnloadWhenFull() then return end
 
-	if self:canDriveBesideCombine(self.combineToUnload) or
-			(self.combineToUnload.cp.driver and self.combineToUnload.cp.driver:isWaitingInPocket()) then
-		self:driveBesideCombine()
-	end
+	self:driveBesideCombine()
 
 	--when the combine is empty, stop and wait for next combine
 	if self:getCombinesFillLevelPercent() <= 0.1 then

@@ -30,8 +30,9 @@ function OverloaderAIDriver:init(vehicle)
     --there seems to be a bug, where "vehicle" is not always set once start is pressed
 	CombineUnloadAIDriver.init(self, vehicle)
     self:initStates(OverloaderAIDriver.myStates)
-    self:debug('OverloaderAIDriver:init()')
     self.mode = courseplay.MODE_OVERLOADER
+	self.debugChannel = courseplay.DBG_MODE_3
+    self:debug('OverloaderAIDriver:init()')
 	self.unloadCourseState = self.states.ENROUTE
     self.nearOverloadPoint = false
 end
@@ -132,9 +133,9 @@ function OverloaderAIDriver:isAugerPipeToolPositionsOkay(dt)
 	return true
 end
 
--- make sure we stay close to the trailer while overloading
-function OverloaderAIDriver:isProximitySwerveEnabled()
-    return CombineUnloadAIDriver.isProximitySwerveEnabled(self) and not self.nearOverloadPoint
+function OverloaderAIDriver:isProximitySwerveEnabled(vehicle)
+	-- make sure we stay close to the trailer while overloading
+	return CombineUnloadAIDriver.isProximitySwerveEnabled(self, vehicle) and not self.nearOverloadPoint
 end
 
 function OverloaderAIDriver:isProximitySpeedControlEnabled()
@@ -189,4 +190,9 @@ end
 --override this as mode 3 unloading works separate without triggerHandler
 function OverloaderAIDriver:enableFillTypeUnloading()
 	
+end
+
+--- Is around the overload point?
+function OverloaderAIDriver:isNearOverloadPoint()
+	return self.nearOverloadPoint
 end

@@ -58,18 +58,21 @@ local function getLocalDeltaOffset( polygon, point, mode, centerSettings, deltaO
 	end
 end
 
--- smooth adds new points where we loose the passNumber attribute.
+-- smooth adds new points where we lose the passNumber attribute.
 -- here we fix that. I know it's ugly and there must be a better way to
 -- do this somehow smooth should preserve these, but whatever...
-local function addMissingPassNumber( headlandPath )
+local function addMissingPassNumber(headlandPath)
 	local currentPassNumber = 0
-	for i, point in headlandPath:iterator() do
-		if point.passNumber then
-			if point.passNumber ~= currentPassNumber then
-				currentPassNumber = point.passNumber
+	-- headlandPath as generated starts at the outermost headland and spirals towards the center of the field.headlandPath
+	-- we iterate backwards here so the transition from headland n-1 to headland n will get the pass number n. This makes
+	-- sure the headland based pathfinder always stays on the outermost headland
+	for i = #headlandPath, 1, -1 do
+		if headlandPath[i].passNumber then
+			if headlandPath[i].passNumber ~= currentPassNumber then
+				currentPassNumber = headlandPath[i].passNumber
 			end
 		else
-			point.passNumber = currentPassNumber
+			headlandPath[i].passNumber = currentPassNumber
 		end
 	end
 end
@@ -188,6 +191,37 @@ function cleanupOffsetEdges(offsetEdges, result, minDistanceBetweenPoints)
 		table.insert(result, offsetEdges[#offsetEdges].to)
 	end
 	result:calculateData()
+end
+
+--- debugPoints will be shown in the standalone LOVE2D implementation for debugging/troubleshooting
+--- whatever is passed in, desparately try to extract a list of points from it
+--- TODO: should probably be implemented recursively
+local function saveAsDebugPoints(polygon, depth)
+	if not polygon then return end
+	depth = depth or -1
+	if depth == 0 then return end
+	if polygon.copy then
+		print('saveAsDebugPoints: this is a polygon')
+		debugPoints = Polygon:copy(polygon)
+	else
+		debugPoints = debugPoints or Polygon:new()
+		for k, v in pairs(polygon) do
+			print('saveAsDebugPoints: this is a table ', k)
+			if type(v) == 'table' then
+				if v.x and v.y then
+					table.insert(debugPoints, {x = v.x, y = v.y})
+				end
+				saveAsDebugPoints(v, depth - 1)
+			end
+		end
+	end
+end
+
+local function transformDebugPolygon(bestAngle, dx, dy)
+	if debugPoints then
+		debugPoints:rotate(-math.rad(bestAngle))
+		debugPoints:translate(dx, dy)
+	end
 end
 
 local function continueUntilStraightSection(headlandPath, track, passNumber, i, step, isConnectingTrack)
@@ -509,10 +543,10 @@ function generateTwoSideHeadlands( polygon, islands, implementWidth, headlandSet
 	-- headlands. The first and last intersection in the list is hopefully the intersection with the boundary
 	-- on the left and the right. The tracks are now also parallel to the x axis, track #1 on the bottom.
 	-- Find the section of the boundary we'll use our headland, first on the left:
-	local bottomLeftIx = parallelTracks[startTrack].intersections[1].headlandVertexIx
-	local topLeftIx = parallelTracks[endTrack].intersections[1].headlandVertexIx
-	local bottomRightIx = parallelTracks[startTrack].intersections[#parallelTracks[startTrack].intersections].headlandVertexIx
-	local topRightIx = parallelTracks[endTrack].intersections[#parallelTracks[endTrack].intersections].headlandVertexIx
+	local bottomLeftIx = parallelTracks[startTrack].intersections[1].headlandEdge.fromIx
+	local topLeftIx = parallelTracks[endTrack].intersections[1].headlandEdge.fromIx
+	local bottomRightIx = parallelTracks[startTrack].intersections[#parallelTracks[startTrack].intersections].headlandEdge.fromIx
+	local topRightIx = parallelTracks[endTrack].intersections[#parallelTracks[endTrack].intersections].headlandEdge.fromIx
 
 	-- we need this for the part which connects the left and right side headlands.
 	local headlandAround = calculateHeadlandTrack(boundary, headlandSettings.mode, boundary.isClockwise, implementWidth / 2,
@@ -637,6 +671,7 @@ function generateTwoSideHeadlands( polygon, islands, implementWidth, headlandSet
 
 	result:rotate(-math.rad(bestAngle))
 	result:translate(dx, dy)
+	transformDebugPolygon(bestAngle, dx, dy)
 	return result, innerBoundary
 end
 
@@ -654,3 +689,4 @@ function extendLineToOtherLine(line, otherLine, extension)
 	if is then table.insert(line, is) end
 	line:calculateData()
 end
+

@@ -54,7 +54,7 @@ CombineAIDriver.turnTypes = {
 CombineAIDriver.isACombineAIDriver = true
 
 function CombineAIDriver:init(vehicle)
-	courseplay.debugVehicle(11, vehicle, 'CombineAIDriver:init()')
+	courseplay.debugVehicle(courseplay.DBG_AI_DRIVER, vehicle, 'CombineAIDriver:init()')
 	UnloadableFieldworkAIDriver.init(self, vehicle)
 	self:initStates(CombineAIDriver.myStates)
 	self.fruitLeft, self.fruitRight = 0, 0
@@ -138,7 +138,7 @@ function CombineAIDriver:setUpPipe()
 				self.pipe:setAnimationTime(self.pipe.animation.name, 1, true)
 			else
 				-- as seen in the Giants pipe code
-				self.objectWithPipe:setPipeState(AIDriverUtil.PIPE_STATE_OPEN)
+				self.objectWithPipe:setPipeState(AIDriverUtil.PIPE_STATE_OPEN, true)
 				self.objectWithPipe:updatePipeNodes(999999, nil)
 			end
 		end
@@ -155,7 +155,7 @@ function CombineAIDriver:setUpPipe()
 			if self.pipe.animation.name then
 				self.pipe:setAnimationTime(self.pipe.animation.name, 0, true)
 			else
-				self.objectWithPipe:setPipeState(AIDriverUtil.PIPE_STATE_CLOSED)
+				self.objectWithPipe:setPipeState(AIDriverUtil.PIPE_STATE_CLOSED, true)
 				self.objectWithPipe:updatePipeNodes(999999, nil)
 			end
 		end
@@ -1496,20 +1496,24 @@ end
 
 --- Make life easier for unloaders, increases reach of the pipe
 function CombineAIDriver:fixMaxRotationLimit()
-	local LastPipeNode = self.pipe.nodes and self.pipe.nodes[#self.pipe.nodes]
-	if self:isChopper() and LastPipeNode and LastPipeNode.maxRotationLimits then
-		self.oldLastPipeNodeMaxRotationLimit = LastPipeNode.maxRotationLimits
-        self:debug('Chopper fix maxRotationLimits, old Values: x=%s, y= %s, z =%s', tostring(LastPipeNode.maxRotationLimits[1]), tostring(LastPipeNode.maxRotationLimits[2]), tostring(LastPipeNode.maxRotationLimits[3]))
-        LastPipeNode.maxRotationLimits = nil   
-    end
+	if self.pipe then
+		local lastPipeNode = self.pipe.nodes and self.pipe.nodes[#self.pipe.nodes]
+		if self:isChopper() and lastPipeNode and lastPipeNode.maxRotationLimits then
+			self.oldLastPipeNodeMaxRotationLimit = lastPipeNode.maxRotationLimits
+			self:debug('Chopper fix maxRotationLimits, old Values: x=%s, y= %s, z =%s', tostring(lastPipeNode.maxRotationLimits[1]), tostring(lastPipeNode.maxRotationLimits[2]), tostring(lastPipeNode.maxRotationLimits[3]))
+			lastPipeNode.maxRotationLimits = nil
+		end
+	end
 end
 
 function CombineAIDriver:resetFixMaxRotationLimit()
-	local LastPipeNode = self.pipe.nodes and self.pipe.nodes[#self.pipe.nodes]
-	if LastPipeNode and self.oldLastPipeNodeMaxRotationLimit then 
-		LastPipeNode.maxRotationLimits = self.oldLastPipeNodeMaxRotationLimit
-		self:debug('Chopper: reset maxRotationLimits is x=%s, y= %s, z =%s', tostring(LastPipeNode.maxRotationLimits[1]), tostring(LastPipeNode.maxRotationLimits[3]), tostring(LastPipeNode.maxRotationLimits[3]))
-		self.oldLastPipeNodeMaxRotationLimit = nil
+	if self.pipe then
+		local lastPipeNode = self.pipe.nodes and self.pipe.nodes[#self.pipe.nodes]
+		if lastPipeNode and self.oldLastPipeNodeMaxRotationLimit then
+			lastPipeNode.maxRotationLimits = self.oldLastPipeNodeMaxRotationLimit
+			self:debug('Chopper: reset maxRotationLimits is x=%s, y= %s, z =%s', tostring(lastPipeNode.maxRotationLimits[1]), tostring(lastPipeNode.maxRotationLimits[3]), tostring(lastPipeNode.maxRotationLimits[3]))
+			self.oldLastPipeNodeMaxRotationLimit = nil
+		end
 	end
 end
 
@@ -1714,7 +1718,7 @@ end
 
 function CombineAIDriver:onDraw()
 
-	if not courseplay.debugChannels[6] then return end
+	if not courseplay.debugChannels[courseplay.DBG_IMPLEMENTS] then return end
 
 	local dischargeNode = self.combine:getCurrentDischargeNode()
 	if dischargeNode then

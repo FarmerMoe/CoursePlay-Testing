@@ -3,12 +3,9 @@
 	<texts>
 		<text name="COURSEPLAY_RECORDING_START" 											text="Начать запись маршрута" />
 		<text name="COURSEPLAY_DRIVER" 														text="Транспорт" />
-		<text name="COURSEPLAY_PPC_OFF" 													text="Обычный режим" />
-		<text name="COURSEPLAY_PPC_ON" 														text="Экспериментальный режим" />
-		<text name="COURSEPLAY_AIDRIVER" 													text="AI driver" />
 		<text name="COURSEPLAY_UNLOADING_DRIVER_START" 										text="Отправить транспорт" />
 		<text name="COURSEPLAY_UNLOADING_DRIVER_STOP" 										text="Остановить транспорт" />
-		<text name="COURSEPLAY_STOP_AT_LAST_POINT" 											text="Остановить в конечной точке/триггере:" />
+		<text name="COURSEPLAY_STOP_AT_LAST_POINT" 											text="Остановить в конечной точке:" />
 		<text name="COURSEPLAY_NUMBER_OF_RUNS" 												text="Выполнить количество рейсов:" />
 		<text name="COURSEPLAY_RESET_NUMBER_OF_RUNS" 										text="Обнулить к-во выполненных рейсов"/>
 		<text name="COURSEPLAY_UNLIMITED" 													text="неограниченно" />
@@ -28,7 +25,7 @@
 		<text name="COURSEPLAY_MODE_4" 														text="УДОБРЕНИЕ И ПОСЕВ" />
 		<text name="COURSEPLAY_MODE_5" 														text="ПЕРЕГОН ТЕХНИКИ" />
 		<text name="COURSEPLAY_MODE_6" 														text="РАЗНЫЕ ПОЛЕВЫЕ РАБОТЫ" />
-		<text name="COURSEPLAY_MODE_7" 														text="САМОРАЗГУЗКА КОМБАЙНА" />
+		<text name="COURSEPLAY_MODE_7" 														text="СБОР ИЛИ ОБМОТКА ТЮКОВ" />
 		<text name="COURSEPLAY_MODE_8" 														text="ДОСТАВКА НА ПОЛЕ" /> <!-- Field Supply -->
 		<text name="COURSEPLAY_MODE_9" 														text="РАБОТЫ ДЛЯ ПОГРУЗЧИКА" />
 		<text name="COURSEPLAY_MODE_10" 													text="ВЫРАВНИВАНИЕ И УПЛОТНЕНИЕ" />
@@ -75,6 +72,7 @@
 		<text name="COURSEPLAY_NEEDS_UNLOADING" 											text="нуждается в разгрузке. " />
 		<text name="COURSEPLAY_NEEDS_REFILLING" 											text="нуждается в заправке. " />
 		<text name="COURSEPLAY_UNLOADING_BALES" 											text="выгрузка тюков." />
+		<text name="COURSEPLAY_NO_FIELD_SELECTED"											text=": поле не выбрано" />
 		<text name="COURSEPLAY_IS_IN_TRAFFIC" 												text="застрял." />
 		<text name="COURSEPLAY_SLOWING_DOWN_FOR_TRAFFIC" 									text="замедляется из-за трафика" />
 		<text name="COURSEPLAY_TIPTRIGGER_REACHED" 											text="Достигнут пункт разгрузки" />
@@ -153,7 +151,7 @@
 		<text name="COURSEPLAY_WRONG_TRAILER" 												text="Неподходящий тип прицепа для маршрута" />
 		<text name="COURSEPLAY_WRONG_TOOL" 													text="Неподходящий тип инструмента для маршрута" />
 		<text name="COURSEPLAY_MODE_NOT_SUPPORTED_FOR_VEHICLETYPE" 							text="Неподходящий тип техники для маршрута" />
-		<text name="COURSEPLAY_WEATHER_WARNING" 											text="надо подождать хорошей погоды" />
+		<text name="COURSEPLAY_WEATHER_WARNING" 											text="ожидает хорошей погоды" />
 		<text name="COURSEPLAY_LANE_OFFSET" 												text="Смещение проходов:" />
 		<text name="COURSEPLAY_TOOL_OFFSET_X" 												text="Поперечное смещение оборудования:" />
 		<text name="COURSEPLAY_TOOL_OFFSET_Z" 												text="Продольное смещение оборудования:" />
@@ -286,8 +284,9 @@
 		<text name="COURSEPLAY_CURRENT_POINT" 												text="продолжить маршрут" />
 		<text name="COURSEPLAY_NEXT_POINT" 													text="с ближайшей подходящей точки" />
 		<text name="COURSEPLAY_UNLOAD" 														text="с разгрузки" />
+		<text name="COURSEPLAY_COLLECT_BALES" 												text="со сбора или обмотки тюков" />
 		<text name="COURSEPLAY_FIELD_EDGE_PATH" 											text="Выбрать границу" />
-		<text name="COURSEPLAY_FIELD" 														text="поля №" />
+		<text name="COURSEPLAY_FIELD" 														text="поле №" />
 		<text name="COURSEPLAY_CURRENTLY_LOADED_COURSE" 									text="(загруженный маршрут)" />
 		<text name="COURSEPLAY_FIELD_SCAN_IN_PROGRESS" 										text="начальная обработка" />
 		<text name="COURSEPLAY_SCANNING_FIELD_NMB" 											text="СКАНИРОВАНИЕ ПОЛЕЙ %d/%d" />

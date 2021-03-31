@@ -231,8 +231,8 @@ function courseplay.hud:setup()
 		[courseplay.MODE_SEED_FERTILIZE]		 = { 220, 72, 252,40 };
 		[courseplay.MODE_TRANSPORT]				 = {   4,108,  36,76 };
 		[courseplay.MODE_FIELDWORK]				 = {  40,108,  72,76 };
-		[courseplay.MODE_COMBINE_SELF_UNLOADING] = {  76,108, 108,76 };
-		[courseplay.MODE_FIELD_SUPPLY] = { 112,108, 144,76 };
+		[courseplay.MODE_BALE_COLLECTOR] 		 = {  76,108, 108,76 };
+		[courseplay.MODE_FIELD_SUPPLY]  		 = { 112,108, 144,76 };
 		[courseplay.MODE_SHOVEL_FILL_AND_EMPTY]	 = { 148,108, 180,76 };
 		[courseplay.MODE_BUNKERSILO_COMPACTER]	 = { 219,431, 251,399 };
 	};
@@ -323,8 +323,8 @@ function courseplay.hud:setup()
 		[courseplay.MODE_SEED_FERTILIZE]		 = {  40,144,  72,112 };
 		[courseplay.MODE_TRANSPORT]				 = {  76,144, 108,112 };
 		[courseplay.MODE_FIELDWORK]				 = { 112,144, 144,112 };
-		[courseplay.MODE_COMBINE_SELF_UNLOADING] = { 148,144, 180,112 };
-		[courseplay.MODE_FIELD_SUPPLY] = { 184,144, 216,112 };
+		[courseplay.MODE_BALE_COLLECTOR] 		 = { 148,144, 180,112 };
+		[courseplay.MODE_FIELD_SUPPLY] 			 = { 184,144, 216,112 };
 		[courseplay.MODE_SHOVEL_FILL_AND_EMPTY]	 = { 220,144, 252,112 };
 		[courseplay.MODE_BUNKERSILO_COMPACTER]	 = { 219,394, 251,362 };
 	};
@@ -355,8 +355,8 @@ function courseplay.hud:setup()
 		[courseplay.MODE_SEED_FERTILIZE] 			= courseplay.utils:rgbToNormal( 30, 255, 156, 1),       -- Light Green
 		[courseplay.MODE_TRANSPORT] 				= courseplay.utils:rgbToNormal( 21, 198, 255, 1),       -- Blue
 		[courseplay.MODE_FIELDWORK] 				= courseplay.utils:rgbToNormal( 49,  52, 140, 1),       -- Dark Blue
-		[courseplay.MODE_COMBINE_SELF_UNLOADING]	= courseplay.utils:rgbToNormal(159,  29, 250, 1),       -- Purple
-		[courseplay.MODE_FIELD_SUPPLY] 	= courseplay.utils:rgbToNormal(255,  27, 231, 1),       -- Pink
+		[courseplay.MODE_BALE_COLLECTOR]			= courseplay.utils:rgbToNormal(159,  29, 250, 1),       -- Purple
+		[courseplay.MODE_FIELD_SUPPLY] 				= courseplay.utils:rgbToNormal(255,  27, 231, 1),       -- Pink
 		[courseplay.MODE_SHOVEL_FILL_AND_EMPTY]		= courseplay.utils:rgbToNormal(231,  19,  19, 1),       -- Red
 		[courseplay.MODE_BUNKERSILO_COMPACTER]		= courseplay.utils:rgbToNormal(231,  19,  19, 1),       -- Red
 	};
@@ -369,6 +369,20 @@ function courseplay.hud:setup()
 	self.clickSound = createSample('clickSound');
 	loadSample(self.clickSound, Utils.getFilename('sounds/cpClickSound.ogg', courseplay.path), false);
 end;
+
+---Getter functions
+
+function courseplay.hud:getModeUvs()
+	return self.modeButtonsUVsPx
+end
+
+function courseplay.hud:getIconSpriteSize()
+	return self.iconSpriteSize
+end
+
+function courseplay.hud:getIconSpritePath()
+	return self.iconSpritePath
+end
 
 
 -- ####################################################################################################
@@ -611,7 +625,7 @@ function courseplay.hud:updatePageContent(vehicle, page)
 	-- there is a change, they set forceUpdate to force the update of the HUD page, otherwise there's only an empty
 	-- row shown until the page is reselected
 	local forceUpdate = false
-	courseplay:debug(string.format('%s: loadPage(..., %d), set content', nameNum(vehicle), page), 18);
+	courseplay:debug(string.format('%s: loadPage(..., %d), set content', nameNum(vehicle), page), courseplay.DBG_HUD);
 	--go through all the HUD stuff and update the content	
 	for line,columns in pairs(vehicle.cp.hud.content.pages[page]) do
 		for column,entry in pairs(columns) do
@@ -652,16 +666,25 @@ function courseplay.hud:updatePageContent(vehicle, page)
 					end				
 				elseif entry.functionToCall == 'autoDriveMode:changeByX' then
 					--autoDriveModeSetting
-					if vehicle.cp.canDrive and vehicle.spec_autodrive then
+					if not vehicle.cp.settings.autoDriveMode:isDisabled() then
 						self:enableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.autoDriveMode)
 						vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.autoDriveMode:getLabel()
 						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.autoDriveMode:getText() 
 					else
 						self:disableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.autoDriveMode)
 					end
+				elseif entry.functionToCall == 'stopAtEnd:toggle' then
+					--StopAtEndSetting
+					if not vehicle.cp.settings.stopAtEnd:isDisabled() then
+						self:enableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.stopAtEnd)
+						vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.stopAtEnd:getLabel()
+						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.stopAtEnd:getText() 
+					else
+						self:disableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.stopAtEnd)
+					end
 				elseif entry.functionToCall == 'returnToFirstPoint:changeByX' then
 					--ReturnToFirstPointSetting 
-					if vehicle.cp.canDrive then
+					if not vehicle.cp.settings.returnToFirstPoint:isDisabled() then
 						self:enableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.returnToFirstPoint)
 						self:disableButtonWithFunction(vehicle,page, 'setCustomSingleFieldEdge')
 						vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.returnToFirstPoint:getLabel()
@@ -991,18 +1014,6 @@ function courseplay.hud:updatePageContent(vehicle, page)
 					else
 						self:disableButtonWithFunction(vehicle,page, 'switchCourseplayerSide')
 					end
-				elseif entry.functionToCall == 'turnStage:toggle' then
-					--TurnStageSetting
-					if g_combineUnloadManager:getHasUnloaders(vehicle) then
-						--manual chopping: initiate/end turning maneuver
-						if not  vehicle:getIsCourseplayDriving()  then
-							self:enableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.turnStage)
-							vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.turnStage:getLabel()
-							vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.turnStage:getText()
-						end
-					else
-						self:disableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.turnStage)
-					end
 				elseif entry.functionToCall == 'driverPriorityUseFillLevel:toggle' then
 					--DriverPriorityUseFillLevelSetting 
 					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.driverPriorityUseFillLevel:getLabel()
@@ -1141,16 +1152,9 @@ function courseplay.hud:updatePageContent(vehicle, page)
 					else
 						self:disableButtonWithFunction(vehicle,page,'changeByX',vehicle.cp.settings.separateFillTypeLoading)
 					end
-				elseif entry.functionToCall == 'automaticUnloadingOnField:toggle' then
-					--not used right now!
-					--AutomaticUnloadingOnFieldSetting 
-					if not vehicle.cp.hasUnloadingRefillingCourse then
-						self:enableButtonWithFunction(vehicle,page,'toggle',vehicle.cp.settings.automaticUnloadingOnField)
-						vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.automaticUnloadingOnField:getLabel() 
-						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.automaticUnloadingOnField:getText() 
-					else
-						self:disableButtonWithFunction(vehicle,page,'toggle',vehicle.cp.settings.automaticUnloadingOnField)
-					end
+				elseif entry.functionToCall == 'baleCollectionField:changeByX' then
+					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.baleCollectionField:getLabel()
+					vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.baleCollectionField:getText()
 				elseif entry.functionToCall == 'shovelStopAndGo:toggle' then
 					--ShovelStopAndGoSetting
 					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.shovelStopAndGo:getLabel()
@@ -1260,9 +1264,7 @@ function courseplay.hud:setReloadPageOrder(vehicle, page, bool)
 
 	if vehicle.cp.hud.reloadPage[page] ~= bool then
 		vehicle.cp.hud.reloadPage[page] = bool;
-		if courseplay.debugChannels[18] and bool == true then
-			courseplay:debug(string.format('%s: set reloadPage[%d]', nameNum(vehicle), page), 18);
-		end;
+		courseplay:debug(string.format('%s: set reloadPage[%d]', nameNum(vehicle), page), courseplay.DBG_HUD);
 	end;
 end;
 
@@ -1716,7 +1718,7 @@ end
 --update functions 
 function courseplay.hud:updateCourseList(vehicle, page)
 	-- update courses?
-	courseplay.debugVehicle(8, vehicle, 'updateCourseList(): reload courses %s', tostring(vehicle.cp.reloadCourseItems))
+	courseplay.debugVehicle(courseplay.DBG_COURSES, vehicle, 'updateCourseList(): reload courses %s', tostring(vehicle.cp.reloadCourseItems))
 	if vehicle.cp.reloadCourseItems then
 		courseplay.courses:reloadVehicleCourses(vehicle)
 		CourseplayEvent.sendEvent(vehicle,'self.cp.onMpSetCourses',true)
@@ -2044,6 +2046,10 @@ function courseplay.hud:setAIDriverContent(vehicle)
 	self:addRowButton(vehicle,nil,'start_record', 1, 1, 2 )
 	self:addRowButton(vehicle,vehicle.cp.settings.startingPoint,'next', 1, 2, 2 )
 	self:addRowButton(vehicle,nil,'setDriveNow', 1, 2, 3 )
+	---only enable this button in mode 5 
+	if vehicle.cp.mode == courseplay.MODE_TRANSPORT then
+		self:addRowButton(vehicle,vehicle.cp.settings.stopAtEnd,'toggle', 1, 3, 1 )
+	end
 	self:addSettingsRowWithArrows(vehicle,nil,'switchDriverCopy', 1, 3, 2 )
 	self:setupCopyCourseButton(vehicle, 1, 3)
 	
@@ -2111,11 +2117,10 @@ function courseplay.hud:setFieldWorkAIDriverContent(vehicle)
 	--page 3 settings
 	self:enablePageButton(vehicle, 3)
 	self:addSettingsRow(vehicle,nil,'changeTurnDiameter', 3, 1, 1 )
-	self:addSettingsRow(vehicle,nil,'changeWorkWidth', 3, 2, 1 )
+	self:addSettingsRow(vehicle,nil,'changeWorkWidth', 3, 2, 1, 0.1 )
 	self:setupCalculateWorkWidthButton(vehicle,3, 2)
 	self:addRowButton(vehicle,vehicle.cp.settings.convoyActive,'toggle', 3, 3, 1 )
 	self:addSettingsRow(vehicle,vehicle.cp.settings.convoyMinDistance,'changeByX', 3, 4, 1 )
-	self:addRowButton(vehicle,vehicle.cp.settings.autoDriveMode,'next', 3, 8, 1 ):setOnlyCallLocal();
 	
 	--page 7
 	self:addRowButton(vehicle,nil,'toggleAlignmentWaypoint', 7, 6, 1 )
@@ -2153,7 +2158,6 @@ function courseplay.hud:setCombineAIDriverContent(vehicle)
 	self:addRowButton(vehicle,nil,'sendCourseplayerHome', 0, 3, 1 )
 	if vehicle.cp.isChopper then	
 		self:addRowButton(vehicle,nil,'switchCourseplayerSide', 0, 4, 1 )
-		self:addRowButton(vehicle,vehicle.cp.settings.turnStage,'toggle', 0, 5, 1 )
 	else
 		self:addRowButton(vehicle,vehicle.cp.settings.driverPriorityUseFillLevel,'toggle', 0, 4, 1 )
 		self:addRowButton(vehicle,vehicle.cp.settings.stopForUnload,'toggle', 0, 5, 1 )
@@ -2251,9 +2255,23 @@ function courseplay.hud:setLevelCompactAIDriverContent(vehicle)
 end
 
 
-function courseplay.hud:setBaleLoaderAIDriverContent(vehicle)
-	self:debug(vehicle,"setBaleLoaderAIDriverContent")
-	self:addRowButton(vehicle,vehicle.cp.settings.automaticUnloadingOnField,'toggle', 3, 6, 1 )
+function courseplay.hud:setBaleCollectorAIDriverContent(vehicle)
+	self:debug(vehicle,"setBaleCollectorAIDriverContent")
+	self:addRowButton(vehicle,vehicle.cp.settings.autoDriveMode,'changeByX', 1, 3, 1 )
+	self:addSettingsRow(vehicle, vehicle.cp.settings.baleCollectionField,'changeByX', 1, 4, 1 )
+	self:addRowButton(vehicle,nil,'setCustomSingleFieldEdge', 1, 5, 1 )
+	self:addSettingsRow(vehicle,nil,'setCustomFieldEdgePathNumber', 1, 5, 2 )
+	self:setupCustomFieldEdgeButtons(vehicle,1,5)
+	self:addRowButton(vehicle,nil,'addCustomSingleFieldEdgeToList', 1, 6, 1 )
+	-- shown in place of the custom field row when a course is loaded
+
+	--page 3 settings
+	self:enablePageButton(vehicle, 3)
+	self:addSettingsRow(vehicle,nil,'changeTurnDiameter', 3, 1, 1 )
+
+	--page 8 fieldwork settings
+	self:enablePageButton(vehicle, 8)
+	self:addRowButton(vehicle,vehicle.cp.settings.useRealisticDriving,'toggle', 8, 4, 1 )
 	self:setReloadPageOrder(vehicle, -1, true)
 end
 
@@ -2316,7 +2334,7 @@ function courseplay.hud:addSettingsRowWithArrows(vehicle,setting,funct, hudPage,
 end
 		
 function courseplay.hud:debug(vehicle,...)
-	courseplay.debugVehicle(18, vehicle, ...)
+	courseplay.debugVehicle(courseplay.DBG_HUD, vehicle, ...)
 end	
 	
 -- do not remove this comment

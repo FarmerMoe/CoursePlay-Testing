@@ -42,8 +42,11 @@ function TriggerShovelModeAIDriver:start(startingPoint)
 	self:setShovelState(self.states.STATE_TRANSPORT, 'setup');
 	self:validateWaitpoints()
 	AIDriver.start(self,startingPoint)
-	self.vehicle.cp.settings.stopAtEnd:set(false)
 	self:disableCollisionDetection()
+end
+
+function TriggerShovelModeAIDriver:shouldStopAtEndOfCourse()
+	return false
 end
 
 -- get the needed waitPoint
@@ -86,7 +89,7 @@ function TriggerShovelModeAIDriver:drive(dt)
 			end
 		end
 		--backup for starting somewhere in between
-		if not self:setShovelToPositionFinshed(3,dt) then
+		if not self:setShovelToPositionFinshed(self.SHOVEL_POSITIONS.TRANSPORT,dt) then
 			self:hold()
 		end
 	-- close to the unload waitpoint, so set pre unload shovel position and do a raycast for unload triggers, trailers

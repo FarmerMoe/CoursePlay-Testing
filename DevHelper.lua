@@ -43,7 +43,6 @@ function DevHelper:update()
     if g_currentMission.controlledVehicle and g_currentMission.controlledVehicle.spec_aiVehicle then
 
         if self.vehicle ~= g_currentMission.controlledVehicle then
-            self.otherVehiclesCollisionData = PathfinderUtil.setUpVehicleCollisionData(g_currentMission.controlledVehicle)
             self.vehicleData = PathfinderUtil.VehicleData(g_currentMission.controlledVehicle, true)
         end
 
@@ -64,22 +63,9 @@ function DevHelper:update()
         end
     end
 
-    if self.vehicleData then
-        self.collisionData = PathfinderUtil.getBoundingBoxInWorldCoordinates(self.node, self.vehicleData, 'me')
-        hasCollision, vehicle = PathfinderUtil.findCollidingVehicles(
-                self.collisionData,
-                self.node,
-                self.vehicleData,
-                self.otherVehiclesCollisionData)
-        if hasCollision then
-            self.data.vehicleOverlap = vehicle
-        else
-            self.data.vehicleOverlap = 'none'
-        end
-    end
-
     self.yRot = math.atan2( lx, lz )
     self.data.yRotDeg = math.deg(self.yRot)
+    self.data.yRotDeg2 = math.deg(MathUtil.getYRotationFromDirection(lx, lz))
     self.data.x, self.data.y, self.data.z = getWorldTranslation(self.node)
     self.data.fieldNum = courseplay.fields:getFieldNumForPosition(self.data.x, self.data.z)
 
@@ -87,10 +73,23 @@ function DevHelper:update()
     self.data.isField, self.fieldArea, self.totalFieldArea = courseplay:isField(self.data.x, self.data.z, 3, 3)
 
     self.data.landId =  PathfinderUtil.getFieldIdAtWorldPosition(self.data.x, self.data.z)
+    self.data.owned =  PathfinderUtil.isWorldPositionOwned(self.data.x, self.data.z)
+	self.data.farmlandId = g_farmlandManager:getFarmlandIdAtWorldPosition(self.data.x, self.data.z)
+	self.data.farmland = g_farmlandManager:getFarmlandAtWorldPosition(self.data.x, self.data.z)
     self.data.fieldAreaPercent = 100 * self.fieldArea / self.totalFieldArea
 
+	local y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, self.data.x, self.data.y, self.data.z)
+	self.data.nx, self.data.ny, self.data.nz = getTerrainNormalAtWorldPos(g_currentMission.terrainRootNode, self.data.x, y, self.data.z)
+
+	local xRot, yRot, zRot = PathfinderUtil.getNormalWorldRotation(self.data.x, self.data.z)
+
+	self.data.txRotDeg = math.deg(xRot)
+	self.data.tyRotDeg = math.deg(yRot)
+	self.data.tzRotDeg = math.deg(zRot)
+
     self.data.collidingShapes = ''
-    overlapBox(self.data.x, self.data.y + 0.2, self.data.z, 0, self.yRot, 0, 1.6, 1, 8, "overlapBoxCallback", self, bitOR(AIVehicleUtil.COLLISION_MASK, 2), true, true, true)
+    overlapBox(self.data.x, self.data.y + 0.2, self.data.z, 0, self.yRot, 0, 1.6, 1, 8, "overlapBoxCallback", self,
+		bitOR(AIVehicleUtil.COLLISION_MASK, 2), true, true, true)
 
     if self.pathfinder and self.pathfinder:isActive() then
         local done, path = self.pathfinder:resume()
@@ -108,7 +107,11 @@ function DevHelper:overlapBoxCallback(transformId)
         if collidingObject.getRootVehicle then
             text = 'vehicle' .. collidingObject:getName()
         else
-            text = collidingObject.getName and collidingObject:getName() or 'N/A'
+			if collidingObject:isa(Bale) then
+				text = 'Bale'
+			else
+            	text = collidingObject.getName and collidingObject:getName() or 'N/A'
+			end
         end
     else
         text = ''
@@ -126,16 +129,19 @@ end
 function DevHelper:updateProximitySensors(vehicle)
     if vehicle and vehicle.cp.driver then
         if vehicle.cp.driver.forwardLookingProximitySensorPack then
-            local d, otherVehicle, deg, dAvg =
+            local d, otherVehicle, object, deg, dAvg =
                 vehicle.cp.driver.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
-        end
+			--renderText(0.6, 0.4, 0.018, string.format('d=%.1f %s deg=%.1f dAvg=%.1f dx=%.1f (%s)',
+			--	d, nameNum(otherVehicle), deg, dAvg, dAvg * math.sin(math.rad(deg)), nameNum(vehicle)))
+		end
         if vehicle.cp.driver.backwardLookingProximitySensorPack then
-            local d, otherVehicle, deg, dAvg =
+            local d, otherVehicle, object, deg, dAvg =
                 vehicle.cp.driver.backwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
         end
     end
 end
 
+-- Left-Alt + , (<) = mark current position as start for pathfinding
 -- Left-Alt + , (<) = mark current position as start for pathfinding
 -- Left-Alt + . (>) = mark current position as goal for pathfinding
 -- Left-Ctrl + . (>) = start pathfinding from marked start to marked goal
@@ -148,6 +154,7 @@ function DevHelper:keyEvent(unicode, sym, modifier, isDown)
         -- Left Alt + < mark start
         self.start = State3D(self.data.x, -self.data.z, courseGenerator.fromCpAngleDeg(self.data.yRotDeg))
         self:debug('Start %s', tostring(self.start))
+		PathfinderUtil.checkForObstaclesAhead(self.vehicle, 6)
     elseif bitAND(modifier, Input.MOD_LALT) ~= 0 and isDown and sym == Input.KEY_period then
         -- Left Alt + > mark goal
         self.goal = State3D(self.data.x, -self.data.z, courseGenerator.fromCpAngleDeg(self.data.yRotDeg))
@@ -194,7 +201,7 @@ function DevHelper:startPathfinding()
                 tostring(self.start), tostring(self.goal), self.fieldNumForPathfinding or 0)
         local start = State3D:copy(self.start)
 
-        self.pathfinder, done, path =  PathfinderUtil.startPathfindingFromVehicleToGoal(self.vehicle, start, self.goal,
+        self.pathfinder, done, path =  PathfinderUtil.startPathfindingFromVehicleToGoal(self.vehicle, self.goal,
                 false, self.fieldNumForPathfinding or 0, {}, 10)
 
     end
@@ -222,7 +229,7 @@ function DevHelper:draw()
     for key, value in pairs(self.data) do
         table.insert(data, {name = key, value = value})
     end
-    DebugUtil.renderTable(0.65, 0.3, 0.018, data, 0.05)
+    DebugUtil.renderTable(0.65, 0.3, 0.013, data, 0.05)
     self:drawCourse()
     self:showVehicleSize()
     self:showFillNodes()
@@ -233,6 +240,23 @@ function DevHelper:draw()
     end
     PathfinderUtil.showNodes(self.pathfinder)
     PathfinderUtil.showOverlapBoxes()
+
+	if not self.tNode then
+		self.tNode = createTransformGroup("devhelper")
+		link(g_currentMission.terrainRootNode, self.tNode)
+	end
+
+	PathfinderUtil.setWorldPositionAndRotationOnTerrain(self.tNode, self.data.x, self.data.z, self.yRot, 0.5)
+
+	DebugUtil.drawDebugNode(self.tNode, 'Terrain normal')
+	local nx, ny, nz = getTerrainNormalAtWorldPos(g_currentMission.terrainRootNode, self.data.x, self.data.y, self.data.z)
+
+	local x, y, z = localToWorld(self.node, 0, -1, -3)
+
+	cpDebug:drawLine(x, y, z, 1, 1, 1, x + nx, y + ny, z + nz)
+	local xRot, yRot, zRot = getWorldRotation(self.tNode)
+	DebugUtil.drawOverlapBox(self.data.x, self.data.y, self.data.z, xRot, yRot, zRot, 4, 1, 4, 0, 100, 0)
+
 end
 
 ---@param path State3D[]
@@ -257,7 +281,6 @@ function DevHelper:drawCourse()
         end
     end
 end
-
 
 function DevHelper:showFillNodes()
     for _, vehicle in pairs(g_currentMission.vehicles) do
@@ -297,6 +320,7 @@ function DevHelper:showVehicleSize()
             drawDebugLine(x3,y3,z3,0.2, 0.2 ,1,x4,y4,z4,0.2, 0.2,1);
         end
         if self.vehicleData.trailerRectangle then
+			PathfinderUtil.initializeTrailerHeading(node, self.vehicleData)
             local x, y, z = localToWorld(g_devHelper.helperNode, 0, 0, self.vehicleData.trailerHitchOffset)
             setTranslation(g_devHelper.helperNode, x, y, z)
             setRotation(g_devHelper.helperNode, 0, courseGenerator.toCpAngle(node.tTrailer), 0)
@@ -309,13 +333,6 @@ function DevHelper:showVehicleSize()
             drawDebugLine(x1,y1,z1,0,1,0,x3,y3,z3,0,1,0);
             drawDebugLine(x2,y2,z2,0,1,0,x4,y4,z4,0,1,0);
             drawDebugLine(x3,y3,z3,0,1,0,x4,y4,z4,0,1,0);
-        end
-    end
-    if self.collisionData then
-        for i = 1, 4 do
-            local cp = self.collisionData.corners[i]
-            local pp = self.collisionData.corners[i > 1 and i - 1 or 4]
-            cpDebug:drawLine(cp.x, cp.y + 0.4, cp.z, 1, 0, 0, pp.x, pp.y + 0.4, pp.z)
         end
     end
     DebugUtil.drawDebugNode(g_devHelper.helperNode, 'devhelper')

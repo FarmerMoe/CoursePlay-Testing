@@ -177,7 +177,7 @@ end
 function WaypointNode:setToWaypoint(course, ix, suppressLog)
 	local newIx = math.min(ix, course:getNumberOfWaypoints())
 	if newIx ~= self.ix and self.logChanges and not suppressLog then
-		courseplay.debugVehicle(12, course.vehicle, 'PPC: %s waypoint index %d', getName(self.node), ix)
+		courseplay.debugVehicle(courseplay.DBG_PPC, course.vehicle, 'PPC: %s waypoint index %d', getName(self.node), ix)
 	end
 	self.ix = newIx
 	local x, y, z = course:getWaypointPosition(self.ix)
@@ -197,7 +197,7 @@ function WaypointNode:setToWaypointOrBeyond(course, ix, distance)
 		local nx, ny, nz = localToWorld(self.node, 0, 0, distance)
 		setTranslation(self.node, nx, ny, nz)
 		if self.logChanges and self.mode and self.mode ~= WaypointNode.MODE_LAST_WP then
-			courseplay.debugVehicle(12, course.vehicle, 'PPC: last waypoint reached, moving node beyond last: %s', getName(self.node))
+			courseplay.debugVehicle(courseplay.DBG_PPC, course.vehicle, 'PPC: last waypoint reached, moving node beyond last: %s', getName(self.node))
 		end
 		
 		self.mode = WaypointNode.MODE_LAST_WP
@@ -213,7 +213,7 @@ function WaypointNode:setToWaypointOrBeyond(course, ix, distance)
 		local nx, ny, nz = localToWorld(self.node, 0, 0, distance)
 		setTranslation(self.node, nx, ny, nz)
 		if self.logChanges and self.mode and self.mode ~= WaypointNode.MODE_SWITCH_DIRECTION then
-			courseplay.debugVehicle(12, course.vehicle, 'PPC: switching direction at %d, moving node beyond it: %s', ix, getName(self.node))
+			courseplay.debugVehicle(courseplay.DBG_PPC, course.vehicle, 'PPC: switching direction at %d, moving node beyond it: %s', ix, getName(self.node))
 		end
 		self.mode = WaypointNode.MODE_SWITCH_DIRECTION
 	elseif course:mustReach(ix) then
@@ -225,12 +225,12 @@ function WaypointNode:setToWaypointOrBeyond(course, ix, distance)
 		local nx, ny, nz = localToWorld(self.node, 0, 0, distance)
 		setTranslation(self.node, nx, ny, nz)
 		if self.logChanges and self.mode and self.mode ~= WaypointNode.MODE_MUST_REACH then
-			courseplay.debugVehicle(12, course.vehicle, 'PPC: must reach next waypoint, moving node beyond it: %s', getName(self.node))
+			courseplay.debugVehicle(courseplay.DBG_PPC, course.vehicle, 'PPC: must reach next waypoint, moving node beyond it: %s', getName(self.node))
 		end
 		self.mode = WaypointNode.MODE_MUST_REACH
 	else
 		if self.logChanges and self.mode and self.mode ~= WaypointNode.MODE_NORMAL then
-			courseplay.debugVehicle(12, course.vehicle, 'PPC: normal waypoint (not last, no direction change: %s', getName(self.node))
+			courseplay.debugVehicle(courseplay.DBG_PPC, course.vehicle, 'PPC: normal waypoint (not last, no direction change: %s', getName(self.node))
 		end
 		self.mode = WaypointNode.MODE_NORMAL
 		self:setToWaypoint(course, ix)
@@ -266,7 +266,6 @@ function Course:init(vehicle, waypoints, temporary, first, last)
 	self.currentWaypoint = 1
 	self.length = 0
 	self.headlandLength = 0
-	self.nHeadlandWaypoints = 0
 	self.totalTurns = 0
 	self:enrichWaypointData()
 end
@@ -276,6 +275,7 @@ function Course.createFromGeneratedCourse(vehicle, waypoints, temporary, first, 
 	for i = first or 1, last or #waypoints do
 		table.insert(course.waypoints, Waypoint.initFromGeneratedWp(waypoints[i], i))
 	end
+	course:enrichWaypointData()
 	return course
 end
 
@@ -286,7 +286,6 @@ function Course:initWaypoints()
 			local result = rawget(tbl, key)
 			if not result and type(key) == "number" then
 				result = rawget(tbl, math.min(math.max(1, key), #tbl))
-				--courseplay.debugFormat(14, 'Invalid index %s, clamped to %s', key, math.min(math.max(1, key), #tbl))
 			end
 			return result
 		end
@@ -350,24 +349,25 @@ end
 function Course:enrichWaypointData()
 	if #self.waypoints < 2 then return end
 	self.length = 0
-	self.nHeadlandWaypoints = 0
 	self.headlandLength = 0
 	self.firstHeadlandWpIx = nil
 	self.firstCenterWpIx = nil
 	for i = 1, #self.waypoints - 1 do
+		self.waypoints[i].dToHere = self.length
+		self.waypoints[i].dToHereOnHeadland = self.headlandLength
 		local cx, _, cz = self:getWaypointPosition(i)
-		local nx, _, nz = self:getWaypointPosition( i + 1)
+		local nx, _, nz = self:getWaypointPosition(i + 1)
 		local dToNext = courseplay:distance(cx, cz, nx, nz)
+		self.waypoints[i].dToNext = dToNext
 		self.length = self.length + dToNext
 		if self:isOnHeadland(i) then
-			self.nHeadlandWaypoints = self.nHeadlandWaypoints + 1
 			self.headlandLength = self.headlandLength + dToNext
 			self.firstHeadlandWpIx = self.firstHeadlandWpIx or i
 		else
-			-- TODO: this and firstHeadlandWpIx works only if there is one block on the field and 
-			-- no islands, as then we have more than one group of headlands. But these are only 
+			-- TODO: this and firstHeadlandWpIx works only if there is one block on the field and
+			-- no islands, as then we have more than one group of headlands. But these are only
 			-- for the convoy mode anyway so it is ok if it does not work in all possible situations
-			self.firstCenterWpIx = self.firstCenterWpIx or i	
+			self.firstCenterWpIx = self.firstCenterWpIx or i
 		end
 		if self:isTurnStartAtIx(i) then self.totalTurns = self.totalTurns + 1 end
 		if self:isTurnEndAtIx(i) then
@@ -375,8 +375,6 @@ function Course:enrichWaypointData()
 		elseif self.dFromLastTurn then
 			self.dFromLastTurn = self.dFromLastTurn + dToNext
 		end
-		self.waypoints[i].dToNext = dToNext
-		self.waypoints[i].dToHere = self.length
 		self.waypoints[i].turnsToHere = self.totalTurns
 		self.waypoints[i].dx, _, self.waypoints[i].dz, _ = courseplay:getWorldDirection(cx, 0, cz, nx, 0, nz)
 		local dx, dz = MathUtil.vector2Normalize(nx - cx, nz - cz)
@@ -404,7 +402,10 @@ function Course:enrichWaypointData()
 	self.waypoints[#self.waypoints].dx = self.waypoints[#self.waypoints - 1].dx
 	self.waypoints[#self.waypoints].dz = self.waypoints[#self.waypoints - 1].dz
 	self.waypoints[#self.waypoints].dToNext = 0
-	self.waypoints[#self.waypoints].dToHere = self.length + self.waypoints[#self.waypoints - 1].dToNext
+	self.waypoints[#self.waypoints].dToHere = self.length
+	self.waypoints[#self.waypoints].dToHereOnHeadland = self:isOnHeadland(#self.waypoints - 1) and
+			self.waypoints[#self.waypoints - 1].dToHereOnHeadland + self.waypoints[#self.waypoints - 1].dToNext or
+			self.waypoints[#self.waypoints - 1].dToHereOnHeadland
 	self.waypoints[#self.waypoints].turnsToHere = self.totalTurns
 	self.waypoints[#self.waypoints].calculatedRadius = self:calculateRadius(#self.waypoints)
 	self.waypoints[#self.waypoints].reverseOffset = self:isReverseAt(#self.waypoints)
@@ -425,7 +426,7 @@ function Course:enrichWaypointData()
 			turnFound = true
 		end
 	end
-	courseplay.debugFormat(12, 'Course with %d waypoints created/updated, %.1f meters, %d turns', #self.waypoints, self.length, self.totalTurns)
+	courseplay.debugFormat(courseplay.DBG_COURSES, 'Course with %d waypoints created/updated, %.1f meters, %d turns', #self.waypoints, self.length, self.totalTurns)
 end
 
 function Course:calculateRadius(ix)
@@ -761,7 +762,6 @@ function Course:getDistanceToFirstUpDownRowWaypoint(ix)
 	for i = ix, #self.waypoints - 1 do
 		isConnectingTrack = isConnectingTrack or self.waypoints[i].isConnectingTrack
 		d = d + self.waypoints[i].dToNext
-		--courseplay.debugFormat(12, 'd = %.1f i = %d, lane = %s', d, i, tostring(self.waypoints[i].lane))
 		if self.waypoints[i].lane and not self.waypoints[i + 1].lane and isConnectingTrack then
 			return d, i + 1
 		end
@@ -969,7 +969,7 @@ function Course:getNextFwdWaypointIx(ix)
 			return i
 		end
 	end
-	courseplay.debugFormat(12, 'Course: could not find next forward waypoint after %d', ix)
+	courseplay.debugFormat(courseplay.DBG_COURSES, 'Course: could not find next forward waypoint after %d', ix)
 	return ix
 end
 
@@ -983,7 +983,7 @@ function Course:getNextFwdWaypointIxFromVehiclePosition(ix, vehicleNode, lookAhe
 			end
 		end
 	end
-	courseplay.debugFormat(12, 'Course: could not find next forward waypoint after %d', ix)
+	courseplay.debugFormat(courseplay.DBG_COURSES, 'Course: could not find next forward waypoint after %d', ix)
 	return ix
 end
 
@@ -997,7 +997,7 @@ function Course:getNextRevWaypointIxFromVehiclePosition(ix, vehicleNode, lookAhe
 			end
 		end
 	end
-	courseplay.debugFormat(12, 'Course: could not find next forward waypoint after %d', ix)
+	courseplay.debugFormat(courseplay.DBG_COURSES, 'Course: could not find next forward waypoint after %d', ix)
 	return ix
 end
 
@@ -1050,17 +1050,20 @@ end
 ---@param dx number	direction to extend
 ---@param dz number direction to extend
 function Course:extend(length, dx, dz)
+	self:print()
 	local lastWp = self.waypoints[#self.waypoints]
 	local len = self.waypoints[#self.waypoints - 1].dToNext
-	dx, dz = dx or lastWp.dx / len, dz or lastWp.dz / len
+	dx, dz = dx or lastWp.dx, dz or lastWp.dz
+	print(dx, dz)
 	local wpDistance = 2
-	for _ = wpDistance, math.max(length, wpDistance), wpDistance do
+	for i = wpDistance, math.max(length, wpDistance), wpDistance do
 		lastWp = self.waypoints[#self.waypoints]
 		local x = lastWp.x + dx * wpDistance
 		local z = lastWp.z + dz * wpDistance
 		self:appendWaypoint({x = x, z = z})
 	end
 	self:enrichWaypointData()
+	self:print()
 end
 
 --- Create a new (straight) temporary course based on a node
@@ -1350,7 +1353,7 @@ function Course:calculateOffsetCourse(nVehicles, position, width, useSameTurnWid
 		origHeadlandsCourse, ix = self:getNextHeadlandSection(nil, ix)
 		if origHeadlandsCourse:getNumberOfWaypoints() > 0 then
 			if origHeadlandsCourse:getNumberOfWaypoints() > 2 then
-				courseplay.debugFormat(7, 'Headland section to %d', ix)
+				courseplay.debugFormat(courseplay.DBG_COURSES, 'Headland section to %d', ix)
 				courseGenerator.pointsToXyInPlace(origHeadlandsCourse.waypoints)
 				local origHeadlands = Polyline:new(origHeadlandsCourse.waypoints)
 				origHeadlands:calculateData()
@@ -1366,30 +1369,45 @@ function Course:calculateOffsetCourse(nVehicles, position, width, useSameTurnWid
 					offsetHeadlands:calculateData()
 					self:markAsHeadland(offsetHeadlands)
 					if origHeadlandsCourse:isTurnStartAtIx(origHeadlandsCourse:getNumberOfWaypoints()) then
-						courseplay.debugFormat(7, 'Original headland transitioned to the center with a turn, adding a turn start to the offset one')
+						courseplay.debugFormat(courseplay.DBG_COURSES, 'Original headland transitioned to the center with a turn, adding a turn start to the offset one')
 						offsetHeadlands[#offsetHeadlands].turnStart = true
 					end
 					addTurnsToCorners(offsetHeadlands, math.rad(60), true)
 					courseGenerator.pointsToXzInPlace(offsetHeadlands)
 					offsetCourse:appendWaypoints(offsetHeadlands)
-					courseplay.debugFormat(7, 'Headland done %d', ix)
+					courseplay.debugFormat(courseplay.DBG_COURSES, 'Headland done %d', ix)
 				end
 			else
-				courseplay.debugFormat(7, 'Short headland section to %d', ix)
+				courseplay.debugFormat(courseplay.DBG_COURSES, 'Short headland section to %d', ix)
 				origHeadlandsCourse:offsetUpDownRows(offset, 0)
 				offsetCourse:append(origHeadlandsCourse)
 			end
 		else
 			local upDownCourse
-			courseplay.debugFormat(7, 'Get next non-headland %d', ix)
+			courseplay.debugFormat(courseplay.DBG_COURSES, 'Get next non-headland %d', ix)
 			upDownCourse, ix = self:getNextNonHeadlandSection(ix)
 			if upDownCourse:getNumberOfWaypoints() > 0 then
-				courseplay.debugFormat(7, 'Up/down section to %d', ix)
+				courseplay.debugFormat(courseplay.DBG_COURSES, 'Up/down section to %d', ix)
 				upDownCourse:offsetUpDownRows(offset, 0, useSameTurnWidth)
 				offsetCourse:append(upDownCourse)
 			end
 		end
 	end
+	courseplay.debugFormat(courseplay.DBG_COURSES, 'Original headland length %.0f m, new headland length %.0f m (%.1f %%, %.1f m)',
+			self.headlandLength, offsetCourse.headlandLength, 100 * offsetCourse.headlandLength / self.headlandLength,
+			offsetCourse.headlandLength - self.headlandLength)
+	local originalNonHeadlandLength = self.length - self.headlandLength
+	local offsetNonHeadlandLength = offsetCourse.length - offsetCourse.headlandLength
+	courseplay.debugFormat(courseplay.DBG_COURSES, 'Original non-headland length %.0f m, new non-headland length %.0f m (%.1f %%, %.1f m)',
+			originalNonHeadlandLength, offsetNonHeadlandLength,
+			100 * offsetNonHeadlandLength / originalNonHeadlandLength,
+			offsetNonHeadlandLength - originalNonHeadlandLength)
+	-- remember this for the convoy progress calculation
+	offsetCourse.headlandLengthRatio = offsetCourse.headlandLength > 0 and
+		self.headlandLength / offsetCourse.headlandLength or 1
+	offsetCourse.nonHeadlandLengthRatio = originalNonHeadlandLength / offsetNonHeadlandLength
+	offsetCourse.originalCourseLength = offsetCourse.nonHeadlandLengthRatio * offsetNonHeadlandLength
+			+ offsetCourse.headlandLengthRatio * offsetCourse.headlandLength
 	-- apply tool offset to new course
 	offsetCourse:setOffset(self.offsetX, self.offsetZ)
 	return offsetCourse
@@ -1519,6 +1537,20 @@ end
 
 function Course:getProgress(ix)
 	ix = ix or self:getCurrentWaypointIx()
-	return self.waypoints[ix].dToHere / self.length
+	if self.originalCourseLength then
+		-- this is an offset course, measure progress in the original course
+		-- we assume that the non-headland part of the course is the same as the original ...
+		local dToHereOnNonHeadland = self.waypoints[ix].dToHere - self.waypoints[ix].dToHereOnHeadland
+		-- however, the headland part is shorter or longer for the inner and outer offsets (when using multiple tools
+		-- on the same field in a group, for example 3 combines, one on the original course, on on the left, one on
+		-- the right. When working clockwise, the headland for one on the right is shorter.
+		-- So, we project the distance elapsed on the actual offset headland back to the distance elapsed on the
+		-- original headland.
+		local dToHere = self.nonHeadlandLengthRatio * dToHereOnNonHeadland +
+				self.headlandLengthRatio * self.waypoints[ix].dToHereOnHeadland
+		return dToHere / self.originalCourseLength, ix
+	else
+		return self.waypoints[ix].dToHere / self.length, ix
+	end
 end
 

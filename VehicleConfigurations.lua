@@ -32,9 +32,11 @@ VehicleConfigurations.attributes = {
     {name = 'toolOffsetX', getXmlFunction = getXMLFloat},
     {name = 'noReverse', getXmlFunction = getXMLBool},
     {name = 'turnRadius', getXmlFunction = getXMLFloat},
+    {name = 'workingWidth', getXmlFunction = getXMLFloat},
     {name = 'balerUnloadDistance', getXmlFunction = getXMLFloat},
     {name = 'directionNodeToOffsetZ', getXmlFunction = getXMLFloat},
-    {name = 'implementWheelAlwaysOnGround', getXmlFunction = getXMLBool}
+    {name = 'implementWheelAlwaysOnGround', getXmlFunction = getXMLBool},
+    {name = 'ignoreCollisionBoxesWhenFolded', getXmlFunction = getXMLBool}
 }
 
 function VehicleConfigurations:init()
