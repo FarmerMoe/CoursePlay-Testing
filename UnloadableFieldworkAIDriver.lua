@@ -34,10 +34,11 @@ UnloadableFieldworkAIDriver.fillLevelFullPercentage = UnloadableFieldworkAIDrive
 UnloadableFieldworkAIDriver.fillLevelEmptyPercentage = 0.1
 
 function UnloadableFieldworkAIDriver:init(vehicle)
-	courseplay.debugVehicle(11,vehicle,'UnloadableFieldworkAIDriver:init()') 
+	courseplay.debugVehicle(courseplay.DBG_AI_DRIVER,vehicle,'UnloadableFieldworkAIDriver:init()')
 	FieldworkAIDriver.init(self, vehicle)
 	self:initStates(UnloadableFieldworkAIDriver.myStates)
 	self.mode = courseplay.MODE_FIELDWORK
+	self.debugChannel = courseplay.DBG_MODE_6
 	self.stopImplementsWhileUnloadOrRefillOnField = false
 	self.refillUntilPct = vehicle.cp.settings.refillUntilPct
 end
@@ -48,25 +49,7 @@ function UnloadableFieldworkAIDriver:setHudContent()
 end
 
 function UnloadableFieldworkAIDriver.create(vehicle)
---[[
-	local vehicleName = vehicle and nameNum(vehicle) or "Unknown vehicle"
-	courseplay:debug('EBP - T1 ' .. vehicleName)
-	if vehicleName == 'XUV865M' or vehicleName == '724 Vario' then
-			local Test1 = AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_precisionFarming.soilSampler)
-
-			if Test1 then
-				courseplay:debug('EBP - Test1 is true ')
-			else
-				courseplay:debug('EBP - Test1 is false ')
-			end
-
-			for i,spec in pairs(vehicle.specializationNames) do
-				courseplay:debug('Specialization: ' .. tostring(i) .. '  Name: '.. tostring(spec))
-			end
-	end
---]]
-
-	if AIDriverUtil.hasAIImplementWithSpecialization(vehicle, BaleLoader) then
+	if AIDriverUtil.hasImplementWithSpecialization(vehicle, BaleLoader) then
 		return BaleLoaderAIDriver(vehicle)
 	elseif AIDriverUtil.hasAIImplementWithSpecialization(vehicle, BaleWrapper) then
 		-- Bale wrapper is derived from baler so must check it first to make sure that we instantiate a
@@ -141,43 +124,21 @@ end
 ---@return boolean true if unload took over the driving
 function UnloadableFieldworkAIDriver:driveUnloadOrRefill(dt)
 	self:updateOffset()
-	local allowedToDrive = true
-	local isNearUnloadPoint, unloadPointIx = self.course:hasUnloadPointWithinDistance(self.ppc:getCurrentWaypointIx(),20)
-	-- by default, drive street/recorded speed.
-	self:setSpeed(self:getRecordedSpeed())
-	if not self.ppc:isReversing() then
-		-- 'cause reverse does the raycasting for us
-		self:searchForTipTriggers()
-	end
-	local takeOverSteering = FieldworkAIDriver.driveUnloadOrRefill(self)
-	if self.vehicle.cp.totalFillLevel > 0 then
-		if self:hasTipTrigger() then
-			-- unload at tip trigger
-			self:setSpeed(self.vehicle.cp.speeds.approach)
-			allowedToDrive, takeOverSteering = self:dischargeAtTipTrigger(dt)
-			courseplay:setInfoText(self.vehicle,"COURSEPLAY_TIPTRIGGER_REACHED");
-			self:setSpeed(self.vehicle.cp.speeds.turn)
-		end
-	end
 	self.triggerHandler:enableFillTypeUnloading()
 	self.triggerHandler:enableFillTypeUnloadingBunkerSilo()
 	-- tractor reaches unloadPoint
-	if isNearUnloadPoint then
-		self:setSpeed(self.vehicle.cp.speeds.approach)
-		courseplay:setInfoText(self.vehicle, "COURSEPLAY_TIPTRIGGER_REACHED");
-		allowedToDrive, takeOverSteering = self:dischargeAtUnloadPoint(dt,unloadPointIx)
-	end
-	
+		
+	-- TODO: refactor that whole unload process, it was just copied from the legacy CP code
+	self:searchForTipTriggers()
+	local allowedToDrive, giveUpControl = self:onUnLoadCourse(true, dt)
 	if not allowedToDrive then
-		self:setSpeed(0)
+		self:hold()
+	end	
+	if giveUpControl then 
+		return true
 	end
-		
-	-- done tipping?
-	if self:hasTipTrigger() and self.vehicle.cp.totalFillLevel <= 10 then
-		courseplay:resetTipTrigger(self.vehicle, true);
-	end
-		
-	return takeOverSteering
+	FieldworkAIDriver.driveUnloadOrRefill(self,dt)
+	return false
 end
 
 --- Interface for AutoDrive
