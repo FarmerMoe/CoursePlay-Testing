@@ -901,6 +901,7 @@ end
 -- Although raising the AI start/stop events supposed to fold/unfold the implements, it does not always happen.
 -- So use these to explicitly do so
 function FieldworkAIDriver:unfoldImplements()
+	courseplay:debug('EBP: unfoldImplements() start **********************************')
 	for _,workTool in pairs(self.vehicle.cp.workTools) do
 		if courseplay:isFoldable(workTool) then
 			local isFolding, isFolded, isUnfolded = courseplay:isFolding(workTool)
@@ -1424,6 +1425,7 @@ function FieldworkAIDriver:isValidAIImplement(object)
 			return true
 		else
 			-- no work areas, no AI markers, can't use.
+			courseplay:debug('EBP: FieldWorkAIDriver:isVaildAIImplement() NO work areas, no AI markers, cant use.')
 			return false
 		end
 	end

@@ -1,4 +1,5 @@
 function courseplay:setNameVariable(workTool)
+courseplay:debug('EBP: specialTool:setNameVariable() for: ' .. workTool:getName() )
 	if workTool.cp == nil then
 		workTool.cp = {};
 	end;
@@ -41,21 +42,37 @@ function courseplay:setNameVariable(workTool)
 	end;
 
 	-- [2] SOIL SAMPLERS
-	if workTool.typeName == 'FS19_precisionFarming.SoilSampler' then
+	if workTool.spec_soilSampler then
+		-- workTool.typeName == 'FS19_precisionFarming.soilSampler' then
 		-- workTool.spec_soilSampler or workTool.cp.hasSpecializationSoilSampler then
-		courseplay:debug('EBP: workTool.spec_soilSampler: ' .. workTool.typeName .. ' has Soil Specialization')
-		if workTool.spec_soilSampler then
-			courseplay:debug('EBP: spec_soilSampler found')
-		end
-		--if workTool.cp.hasSpecializationSoilSampler then
-		--	courseplay:debug('EBP: cp.hasSpecializationSoilSampler found')
-		--end
+		courseplay:debug('EBP: spec_soilSampler condition in SpecialTools : ' .. workTool:getName() .. ' has Soil Specialization')
+
+		workTool.cp.hasSpecializationSoilSampler = true;
+		workTool.isSoilSampler = true
 
 		-- EBP put any soil sampler special variables here ..
-		if workTool.spec_soilSampler.samplingRadius ~= nil then
-			-- Reduce oval size by truncating decimal thereby only using integer number.
-			workTool.cp.specialWorkWidth = math.floor(workTool.spec_soilSampler.samplingRadius - 0.5);
-		end;
-	end;
-	
-end;
+
+		-- Isaria Scout  [Precision Farming DLC] specific settings
+		if workTool.cp.xmlFileName == 'isariaScout.xml' then
+			courseplay:debug('EBP: Isaria specs')
+			workTool.cp.lengthOffset = 3
+			workTool.spec_foldable.turnOnFoldDirection = 0
+			workTool.spec_foldable.foldingPartsStartMoveDirection = 1
+
+			--[[
+			if workTool.spec_soilSampler.samplingRadius ~= nil then
+				-- Reduce oval size by truncating decimal thereby only using integer number.
+				--note: removed cp
+				workTool.cp.workWidth = math.floor(workTool.spec_soilSampler.samplingRadius - 0.5);
+				workTool.workWidth = workTool.cp.workWidth + 50
+			else
+				courseplay:debug('EBP: no samplingRadius')
+			end
+
+			if workTool.rootNote == nil then
+				workTool.rootNode = workTool.spec_soilSampler.samplingNode
+			end
+			]]
+		end
+	end
+end

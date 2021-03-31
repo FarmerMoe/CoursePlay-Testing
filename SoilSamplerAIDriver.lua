@@ -14,32 +14,32 @@ SoilSamplerAIDriver.myStates = {
 }
 
 function SoilSamplerAIDriver:init(vehicle)
-  courseplay.debugVehicle(11,vehicle,'SoilSamplerAIDriver:init()')
-	courseplay:debug('EBP: SoilSamplerAIDriver');
+  --courseplay.debugVehicle(11,vehicle,'SoilSamplerAIDriver:init()')
+	courseplay:debug('EBP: SoilSamplerAIDriver:init started');
   FieldworkAIDriver.init(self, vehicle)
 	self:initStates(SoilSamplerAIDriver.myStates)
 	self.mode = courseplay.MODE_FIELDWORK
 
-	courseplay:debug('EBP: headed to custom routine');
-	-- SoilSamplerAIDriver:getAIImpWithSpec(vehicle, soilSampler)
-	-- courseplay:debug('EBP: back from custom routine');
-	self.soilProbe = AIDriverUtil.getAIImplementWithSpecialization(vehicle, soilSampler)
-  if self.soilProbe then
-		courseplay:debug('EBP: SoilSamplerAIDriver:init soilProbe found')
+	courseplay:debug('EBP: SoilSamplerAIDriver check soilProbe')
+	self.soilProbe = AIDriverUtil.getImplementWithSpecializationIsSoilSampler(vehicle)
+ -- did this return true????
+ 	courseplay:debug('IsSoilSampler returned: ' .. self.soilProbe:getName())
+  if self.soilProbe ~= nil then
+		courseplay:debug('EBP: SoilSamplerAIDriver:init: soilProbe found')
 		self.samplingNode = self.soilProbe.samplingNode
 		self.sampleDistance = math.floor((self.soilProbe.samplingRadius / 2) - 0.5)
 		self.numCollectedSamples = self.soilProbe.numCollectedSamples or 0
 
-		self.todd = self.soilProbe.getIsFoldAllowed
 
-		if self.todd then
-			courseplay:debug('EBP: self.todd is true')
-		else
-			courseplay:debug('EBP: self.todd is false')
-		end
+		courseplay:debug('sampleDistance: ' .. self.sampleDistance)
+		courseplay:debug('numCollectedSamples: ' .. self.numCollectedSamples)
+		courseplay:debug('Samplingnode: ' .. self.samplingNode)
+		--soilProbe.getIsFoldAllowed
+
+
 	else
 			courseplay:debug('EBP: SoilSamplerAIDriver:init soilProbe NOT found')
-			courseplay:debug('EBP: XXXXXXXXXX************************************************************************XXXXXXXXXXXXXXXXXXXXXXXXXX')
+			courseplay:debug('EBP: XXXXXXXXXX************************************************************************XXXXXXXXXX')
   end
 
 	-- use this to stop for testing
@@ -55,7 +55,7 @@ function SoilSamplerAIDriver:getAIImpWithSpec(vehicle, specialization)
 	courseplay:debug('EBP: getAIImpWithSpec get attached implements ')
 	local aiImplements = vehicle:getAttachedAIImplements()
 
-	courseplay:debug('EBP: getAttachedAIImplements')
+	courseplay:debug('EBP: SS:getAttachedAIImplements')
 
 	local vehicleName = vehicle and nameNum(vehicle) or "Unknown vehicle"
 	if vehicleName == 'XUV865M' or vehicleName == '724 Vario' then

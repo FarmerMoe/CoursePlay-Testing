@@ -151,6 +151,7 @@ function courseplay:updateWorkTools(vehicle, workTool, isImplement)
 		workTool.cp.distances = nil;
 	end;
 
+	courseplay:debug('EBP: isTrailer in toolManager')
 	courseplay:setNameVariable(workTool);
 	courseplay:setOwnFillLevelsAndCapacities(workTool,vehicle.cp.mode)
 	local hasWorkTool = false;
@@ -203,7 +204,7 @@ function courseplay:updateWorkTools(vehicle, workTool, isImplement)
 
 	if not isImplement or hasWorkTool or workTool.cp.isNonTippersHandledWorkTool then
 		--FOLDING PARTS: isFolded/isUnfolded states
-		courseplay:debug('EBP: Worktool getspecialsettings before folding: ' .. tostring(workTool:getName()))
+		courseplay:debug('EBP: Worktool TM:getspecialsettings() before folding: ' .. tostring(workTool:getName()))
 		courseplay:setFoldedStates(workTool);
 	end;
 

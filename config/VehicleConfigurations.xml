@@ -140,6 +140,10 @@ You can define the following custom settings:
 
     <!--Implements-->
 
+    <!-- PrecisionFarming DLC -->
+    <Vehicle name="isariaScout.xml"
+             workingWidth = "32.5"
+    />
     <!--Bourgault-->
     <Vehicle name="series3320.xml"
              noReverse="true"

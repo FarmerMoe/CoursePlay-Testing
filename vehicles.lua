@@ -1597,8 +1597,10 @@ function AIDriverUtil.hasImplementsOnTheBack(vehicle)
 end
 
 function AIDriverUtil.getAllAttachedImplements(object, implements)
+	courseplay:debug('EBP: Get all Attached Implements')
 	if not implements then implements = {} end
 	for _, implement in ipairs(object:getAttachedImplements()) do
+		--courseplay:debug('EBP: Implement: ' .. implement:getName())
 		table.insert(implements, implement)
 		AIDriverUtil.getAllAttachedImplements(implement.object, implements)
 	end
@@ -1663,28 +1665,64 @@ function AIDriverUtil.getImplementWithSpecialization(vehicle, specialization)
 end
 
 function AIDriverUtil.getImplementWithSpecializationFromList(specialization, implements)
-	for _, implement in ipairs(implements) do
---[[
-	for z,spec1 in pairs(implement.object.specializations) do
-		courseplay:debug('EBP - T5 obj ' .. tostring(spec1))
-	end
-
-		--courseplay:debug('EBP - T4 specialization ' .. specialization)
-		--courseplay:debug('EBP - T4 obj ' .. implement.object.specializations)
-
-		--for i,spec in pairs(specialization) do
-		--	courseplay:debug('Specialization:' .. (spec))
-		--end;
-
-		--for z,spec1 in pairs(implement.object.specializations) do
-		--	courseplay:debug('Obj Specialization:' .. tostring(spec1))
-		--end;
---]]
-
+	for a, implement in ipairs(implements) do
 		if SpecializationUtil.hasSpecialization(specialization, implement.object.specializations) then
 			return implement.object
 		end
 	end
+end
+
+-- This hack is to get around not finding FS19_precisionFarming.SoilSampler specialization using AIDriverUtil.getImplementWithSpecializationFromList
+-- where SpecializationUtil.hasSpecialization() does not seem to match specialization
+function AIDriverUtil.getImplementWithSpecializationIsSoilSampler(vehicle)
+	local vehicleName = vehicle and nameNum(vehicle) or "Unknown vehicle"
+  courseplay:debug('EBP: checking implements for specialization soilSampler - outside loop 1: ' .. vehicleName)
+	-- local aiImplements = vehicle:getAttachedAIImplements()
+	-- return AIDriverUtil.getImplementWithSpecializationFromListT1(aiImplements) ~= nil
+	-- end
+
+	-- function AIDriverUtil.getImplementWithSpecializationFromListT1(attachedAIImplements)
+	-- courseplay:debug('EBP: checking AI Implements for specialization soilSampler - outside loop 2: ' )
+
+	for _, implement in pairs(AIDriverUtil.getAllAttachedImplements(vehicle)) do
+		if implement.object ~= nil then
+			courseplay:debug('EBP: checking implement (in loop):' .. implement.object:getName())
+
+	--[[for a, implement in pairs(attachedAIImplements) do
+		courseplay:debug('EBP: checking implement (in loop):' .. implement.object:getName())
+ 	--]]
+
+		if implement.object.isSoilSampler then
+			courseplay:debug('Looking for specialization: isSoilSampler was found in ' .. implement.object:getName())
+			return implement.object ~= nil
+		elseif implement.object.spec_SoilSampler then
+			courseplay:debug('Looking for specialization: spec_SoilSampler (large s) was found in ' .. implement.object:getName())
+			return implement.object ~= nil
+		elseif implement.spec_soilSampler then
+			courseplay:debug('Looking for specialization: spec_soilSampler (small s) was found in ' .. implement.object:getName())
+			return implement.object ~= nil
+		elseif SpecializationUtil.hasSpecialization(FS19_precisionFarming.SoilSampler, implement.ojbect.specializations) then
+				courseplay:debug('Looking for specialization: hasSpecialization(SoilSampler, implement.object.specializations was found in ' .. implement.object:getName())
+				return implement.object ~= nil
+		else
+			courseplay:debug('Looking for specialization: isSoilSampler NOT in ' .. implement.object:getName())
+		end
+		--[[
+		--what specializations does it have?
+		for z,spec1 in ipairs(implement.object.specializations) do
+			courseplay:debug('Obj Specialization:' .. tostring(spec1))
+		end;
+		courseplay:debug('************************')
+		for x,spec2 in ipairs(implement.object.specializationNames) do
+			courseplay:debug('Specialization Name: ' .. tostring(spec2))
+		end;
+		if implement.object.spec_SoilSampler then
+			courseplay:debug('Looking for specialization: spec_soilSampler was found')
+		end
+		]]
+	end
+	end
+	courseplay:debug('EBP: ****************: isSoilSampler not  found outside loop prior to return')
 end
 
 --- Is this a real wheel the implement is actually rolling on (and turning around) or just some auxiliary support

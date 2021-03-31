@@ -165,9 +165,12 @@
 			<Setup>
 				<Specialization name="spec_strawHarvestPelletizer"/>
 			</Setup>
-			<!--soilSample stuff-->
+			<!--soilSampler/Probes/Scanners that require PrecisionFarming DLC -->
 			<Setup>
 				<Specialization name="spec_soilSampler"/>
+			</Setup>
+			<Setup>
+				<Specialization name="spec_liveCropScanner"/>
 			</Setup>
 		</AllowedSetups>
 		<DisallowedSetups>

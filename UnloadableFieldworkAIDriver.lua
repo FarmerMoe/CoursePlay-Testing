@@ -34,7 +34,7 @@ UnloadableFieldworkAIDriver.fillLevelFullPercentage = UnloadableFieldworkAIDrive
 UnloadableFieldworkAIDriver.fillLevelEmptyPercentage = 0.1
 
 function UnloadableFieldworkAIDriver:init(vehicle)
-	courseplay.debugVehicle(11,vehicle,'UnloadableFieldworkAIDriver:init()') 
+	courseplay.debugVehicle(11,vehicle,'UnloadableFieldworkAIDriver:init()')
 	FieldworkAIDriver.init(self, vehicle)
 	self:initStates(UnloadableFieldworkAIDriver.myStates)
 	self.mode = courseplay.MODE_FIELDWORK
@@ -48,13 +48,14 @@ function UnloadableFieldworkAIDriver:setHudContent()
 end
 
 function UnloadableFieldworkAIDriver.create(vehicle)
---[[
+
 	local vehicleName = vehicle and nameNum(vehicle) or "Unknown vehicle"
-	courseplay:debug('EBP - T1 ' .. vehicleName)
+	courseplay:debug('EBP: UnloadableFieldworkAIDriver() start for: ' .. vehicleName)
+--[[
 	if vehicleName == 'XUV865M' or vehicleName == '724 Vario' then
 			local Test1 = AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_precisionFarming.soilSampler)
 
-			if Test1 then
+			if Test1 ~= nil then
 				courseplay:debug('EBP - Test1 is true ')
 			else
 				courseplay:debug('EBP - Test1 is false ')
@@ -65,7 +66,17 @@ function UnloadableFieldworkAIDriver.create(vehicle)
 			end
 	end
 --]]
-
+--[[
+	if FS19_precisionFarming and UnloadableFieldworkAIDriver.SoilProbeImplement(vehicle) then
+			--AIDriverUtil.getImplementWithSpecializationIsSoilSampler(vehicle) then
+			--AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_precisionFarming.SoilSampler) then
+			-- UnloadableFieldworkAIDriver.SoilProbeImplement(vehicle) then
+			courseplay:debug('EBP: *****************************************************')
+			courseplay:debug('EBP: PrecisionFarming and SoilSampler Specialization found at branching in UnloadableFieldworkAIDriver. Next step is SoilSamplerAIDriver.')
+			return SoilSamplerAIDriver(vehicle);
+	else
+		courseplay:debug('EBP: Not SoilProbe: '.. vehicle:getName())
+		]]
 	if AIDriverUtil.hasAIImplementWithSpecialization(vehicle, BaleLoader) then
 		return BaleLoaderAIDriver(vehicle)
 	elseif AIDriverUtil.hasAIImplementWithSpecialization(vehicle, BaleWrapper) then
@@ -82,23 +93,31 @@ function UnloadableFieldworkAIDriver.create(vehicle)
 		return PlowAIDriver(vehicle)
   elseif FS19_addon_strawHarvest and AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_addon_strawHarvest.StrawHarvestPelletizer) then
 		return CombineAIDriver(vehicle)
-
-	elseif FS19_precisionFarming and UnloadableFieldworkAIDriver.SoilProbeImplement(vehicle) then
-		-- AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_precisionFarming.SoilSampler) then
-		courseplay:debug('EBP: Precision Farming and soilSampler specialization is true')
-		return SoilSamplerAIDriver(vehicle);
-
 	else
 			return UnloadableFieldworkAIDriver(vehicle)
 	end
+
 end;
 
--- EBP Added as temp workaround
+-- EBP Added as temp workaround ----> Not currently used
 function UnloadableFieldworkAIDriver.SoilProbeImplement(vehicle)
 	-- If SoilSampler specialization then true. Added because the code
 	-- AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_precisionFarming.SoilSampler)
 	-- does not seem to return true when expected for the SCOUT
-
+	courseplay:debug('TEST: ' .. vehicle:getName())
+	testobj = AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_precisionFarming.SoilSampler)
+	if testobj ~= nil then
+		courseplay:debug('- Testojb not nil - has AI Implement with Specialization -----------')
+		--testobj:getName()
+		for n in pairs(testobj.object) do
+			print(n)
+		end
+		courseplay:debug('------------')
+		return testobj
+	else
+				courseplay:debug('FALSE')
+	end
+	--[[
 	local vehicleName = vehicle and nameNum(vehicle) or "Unknown vehicle"
 	-- vehicleName == 'XUV865M'
 	if vehicleName == 'XUV865M' then
@@ -108,6 +127,11 @@ function UnloadableFieldworkAIDriver.SoilProbeImplement(vehicle)
 		courseplay:debug('EBP - workaround test returned false')
 		return false
 	end
+--]]
+
+
+	return AIDriverUtil.getImplementWithSpecializationIsSoilSampler(vehicle) ~= nil
+
 end
 
 -- Bale loaders / wrappers have no AI markers

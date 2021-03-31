@@ -28,16 +28,14 @@ function CpManager:setUpDebugChannels()
 			defaultActive[3] = true;
 		end;
 		-- EBP ADDED NOT FOR UPLOAD
+			defaultActive[1] = true;
+			defaultActive[3] = true;
+			defaultActive[6] = true;
 			defaultActive[11] = true;
 			defaultActive[12] = true;
-			defaultActive[13] = true;
 			defaultActive[14] = true;
-			defaultActive[6] = true;
-			defaultActive[7] = true;
-			defaultActive[8] = true;
-			defaultActive[9] = true;
-			defaultActive[4] = true;
-			defaultActive[3] = true;
+			defaultActive[17] = true;
+			defaultActive[21] = true;
 	end;
 
 	-- DEBUG CHANNELS
